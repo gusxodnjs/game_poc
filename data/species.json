@@ -1,0 +1,69 @@
+{
+  "$schema": "./species.schema.json",
+  "version": "poc-v7",
+  "note": "TERRA POC v7 — 6종 (식물 4 + 곤충 2). 계절 따라 #4, #6은 유연 교체 가능.",
+  "species": [
+    {
+      "species_id": "dandelion",
+      "display_name": "민들레",
+      "scientific_name": "Taraxacum platycarpum",
+      "category": "plant",
+      "description": "노란 꽃이 피고 솜털 씨앗이 바람에 날아갑니다. 어디서나 만날 수 있어요.",
+      "minigame": "plant_unfold",
+      "parts": ["꽃", "잎", "줄기", "뿌리"],
+      "sprite": "dandelion_16x16.png"
+    },
+    {
+      "species_id": "foxtail_grass",
+      "display_name": "강아지풀",
+      "scientific_name": "Setaria viridis",
+      "category": "plant",
+      "description": "강아지 꼬리처럼 생긴 이삭이 특징입니다. 인도 가장자리에서 흔히 봅니다.",
+      "minigame": "plant_unfold",
+      "parts": ["이삭", "잎", "줄기", "뿌리"],
+      "sprite": "foxtail_16x16.png"
+    },
+    {
+      "species_id": "white_clover",
+      "display_name": "토끼풀",
+      "scientific_name": "Trifolium repens",
+      "category": "plant",
+      "description": "세 잎이 모인 잎 모양. 가끔 네 잎짜리도 발견됩니다.",
+      "minigame": "plant_unfold",
+      "parts": ["꽃", "잎", "줄기", "뿌리"],
+      "sprite": "clover_16x16.png"
+    },
+    {
+      "species_id": "cherry_blossom",
+      "display_name": "벚꽃",
+      "scientific_name": "Prunus yedoensis",
+      "category": "plant",
+      "description": "봄 한때만 피는 분홍 꽃. 짧지만 인상적인 만남입니다.",
+      "minigame": "plant_unfold",
+      "parts": ["꽃", "잎", "가지", "뿌리"],
+      "sprite": "cherry_16x16.png"
+    },
+    {
+      "species_id": "ladybug",
+      "display_name": "무당벌레",
+      "scientific_name": "Harmonia axyridis",
+      "category": "insect",
+      "description": "빨간 등딱지에 검은 점이 매력. 진딧물을 먹는 농부의 친구입니다.",
+      "minigame": "insect_net",
+      "movement": "slow_linear",
+      "speed": 50,
+      "sprite": "ladybug_16x16.png"
+    },
+    {
+      "species_id": "honeybee",
+      "display_name": "꿀벌",
+      "scientific_name": "Apis mellifera",
+      "category": "insect",
+      "description": "꽃을 옮겨다니며 꿀을 모읍니다. 식물 수정의 중요한 일꾼.",
+      "minigame": "insect_net",
+      "movement": "curved_with_pause",
+      "speed": 80,
+      "sprite": "bee_16x16.png"
+    }
+  ]
+}
