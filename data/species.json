@@ -21,7 +21,7 @@
       "description": "강아지 꼬리처럼 생긴 이삭이 특징입니다. 인도 가장자리에서 흔히 봅니다.",
       "minigame": "plant_unfold",
       "parts": ["이삭", "잎", "줄기", "뿌리"],
-      "sprite": "foxtail_16x16.png"
+      "sprite": "foxtail_grass_16x16.png"
     },
     {
       "species_id": "white_clover",
@@ -31,7 +31,7 @@
       "description": "세 잎이 모인 잎 모양. 가끔 네 잎짜리도 발견됩니다.",
       "minigame": "plant_unfold",
       "parts": ["꽃", "잎", "줄기", "뿌리"],
-      "sprite": "clover_16x16.png"
+      "sprite": "white_clover_16x16.png"
     },
     {
       "species_id": "cherry_blossom",
@@ -41,7 +41,7 @@
       "description": "봄 한때만 피는 분홍 꽃. 짧지만 인상적인 만남입니다.",
       "minigame": "plant_unfold",
       "parts": ["꽃", "잎", "가지", "뿌리"],
-      "sprite": "cherry_16x16.png"
+      "sprite": "cherry_blossom_16x16.png"
     },
     {
       "species_id": "ladybug",
@@ -63,7 +63,7 @@
       "minigame": "insect_net",
       "movement": "curved_with_pause",
       "speed": 80,
-      "sprite": "bee_16x16.png"
+      "sprite": "honeybee_16x16.png"
     }
   ]
 }
