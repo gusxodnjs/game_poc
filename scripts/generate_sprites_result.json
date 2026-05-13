@@ -1,0 +1,91 @@
+{
+  "total_calls": 5,
+  "total_usd": 0.0,
+  "species": [
+    {
+      "species_id": "foxtail_grass",
+      "prompt": "green foxtail grass plant, fluffy seed spike, side view, pixel art, transparent background",
+      "attempts": [
+        {
+          "attempt": 1,
+          "ok": true,
+          "elapsed_s": 29.71,
+          "usage": {
+            "type": "usd",
+            "usd": 0.0
+          },
+          "size_bytes": 2161
+        }
+      ],
+      "success": true
+    },
+    {
+      "species_id": "white_clover",
+      "prompt": "white clover plant with three green leaves, small white flower, top-down view, pixel art, transparent background",
+      "attempts": [
+        {
+          "attempt": 1,
+          "ok": true,
+          "elapsed_s": 21.63,
+          "usage": {
+            "type": "usd",
+            "usd": 0.0
+          },
+          "size_bytes": 2368
+        }
+      ],
+      "success": true
+    },
+    {
+      "species_id": "cherry_blossom",
+      "prompt": "pink cherry blossom flower with branch, spring, side view, pixel art, transparent background",
+      "attempts": [
+        {
+          "attempt": 1,
+          "ok": true,
+          "elapsed_s": 21.99,
+          "usage": {
+            "type": "usd",
+            "usd": 0.0
+          },
+          "size_bytes": 2250
+        }
+      ],
+      "success": true
+    },
+    {
+      "species_id": "ladybug",
+      "prompt": "red ladybug with black spots, top-down view, pixel art, transparent background",
+      "attempts": [
+        {
+          "attempt": 1,
+          "ok": true,
+          "elapsed_s": 47.35,
+          "usage": {
+            "type": "usd",
+            "usd": 0.0
+          },
+          "size_bytes": 1237
+        }
+      ],
+      "success": true
+    },
+    {
+      "species_id": "honeybee",
+      "prompt": "yellow and black honeybee with wings, side view, pixel art, transparent background",
+      "attempts": [
+        {
+          "attempt": 1,
+          "ok": true,
+          "elapsed_s": 31.62,
+          "usage": {
+            "type": "usd",
+            "usd": 0.0
+          },
+          "size_bytes": 1658
+        }
+      ],
+      "success": true
+    }
+  ]
+}
