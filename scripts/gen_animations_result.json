@@ -1,0 +1,119 @@
+{
+  "endpoint": "https://api.pixellab.ai/v1/animate-with-text",
+  "total_calls": 4,
+  "total_usd": 0.0,
+  "subjects": [
+    {
+      "key": "walker_side_walk",
+      "reference": "assets/characters/walker_side_64x64.png",
+      "description": "super cute adorable chibi walker character mascot, big head, large sparkling eyes, tiny body, soft pastel casual outfit, kawaii pixel art",
+      "action": "walking cycle",
+      "view": "side",
+      "direction": "east",
+      "attempts": [
+        {
+          "attempt": 1,
+          "ok": true,
+          "elapsed_s": 44.27,
+          "usage": {
+            "type": "usd",
+            "usd": 0.0
+          },
+          "n_frames": 4,
+          "frames": [
+            "assets/characters/walker_side_walk_frame0_64x64.png",
+            "assets/characters/walker_side_walk_frame1_64x64.png",
+            "assets/characters/walker_side_walk_frame2_64x64.png",
+            "assets/characters/walker_side_walk_frame3_64x64.png"
+          ],
+          "sheet": "assets/characters/walker_side_walk_sheet_64x64.png"
+        }
+      ],
+      "success": true
+    },
+    {
+      "key": "walker_front_idle",
+      "reference": "assets/characters/walker_front_64x64.png",
+      "description": "super cute adorable chibi walker character mascot, big head, large sparkling eyes, tiny body, soft pastel casual outfit, kawaii pixel art",
+      "action": "gentle idle bob, slight head bounce",
+      "view": "side",
+      "direction": "south",
+      "attempts": [
+        {
+          "attempt": 1,
+          "ok": true,
+          "elapsed_s": 40.45,
+          "usage": {
+            "type": "usd",
+            "usd": 0.0
+          },
+          "n_frames": 4,
+          "frames": [
+            "assets/characters/walker_front_idle_frame0_64x64.png",
+            "assets/characters/walker_front_idle_frame1_64x64.png",
+            "assets/characters/walker_front_idle_frame2_64x64.png",
+            "assets/characters/walker_front_idle_frame3_64x64.png"
+          ],
+          "sheet": "assets/characters/walker_front_idle_sheet_64x64.png"
+        }
+      ],
+      "success": true
+    },
+    {
+      "key": "ladybug_walk",
+      "reference": "assets/sprites/ladybug_64x64.png",
+      "description": "red ladybug with black spots, pixel art",
+      "action": "walking cycle, legs moving",
+      "view": "side",
+      "direction": "east",
+      "attempts": [
+        {
+          "attempt": 1,
+          "ok": true,
+          "elapsed_s": 35.01,
+          "usage": {
+            "type": "usd",
+            "usd": 0.0
+          },
+          "n_frames": 4,
+          "frames": [
+            "assets/sprites/ladybug_anim_frame0_64x64.png",
+            "assets/sprites/ladybug_anim_frame1_64x64.png",
+            "assets/sprites/ladybug_anim_frame2_64x64.png",
+            "assets/sprites/ladybug_anim_frame3_64x64.png"
+          ],
+          "sheet": "assets/sprites/ladybug_anim_sheet_64x64.png"
+        }
+      ],
+      "success": true
+    },
+    {
+      "key": "honeybee_flap",
+      "reference": "assets/sprites/honeybee_64x64.png",
+      "description": "yellow and black honeybee with wings, pixel art",
+      "action": "flying in place, rapid wing flap",
+      "view": "side",
+      "direction": "east",
+      "attempts": [
+        {
+          "attempt": 1,
+          "ok": true,
+          "elapsed_s": 23.27,
+          "usage": {
+            "type": "usd",
+            "usd": 0.0
+          },
+          "n_frames": 4,
+          "frames": [
+            "assets/sprites/honeybee_anim_frame0_64x64.png",
+            "assets/sprites/honeybee_anim_frame1_64x64.png",
+            "assets/sprites/honeybee_anim_frame2_64x64.png",
+            "assets/sprites/honeybee_anim_frame3_64x64.png"
+          ],
+          "sheet": "assets/sprites/honeybee_anim_sheet_64x64.png"
+        }
+      ],
+      "success": true
+    }
+  ]
+}

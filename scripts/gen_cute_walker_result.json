@@ -1,0 +1,40 @@
+{
+  "total_calls": 2,
+  "total_usd": 0.0,
+  "results": [
+    {
+      "view": "front",
+      "prompt": "super cute adorable chibi walker character mascot, front view, big round head, large sparkling expressive eyes, tiny rounded body, warm friendly smile, soft pastel casual outfit, rounded shapes, kawaii style, bright cheerful colors, clean pixel art, transparent background",
+      "attempts": [
+        {
+          "attempt": 1,
+          "ok": true,
+          "elapsed_s": 27.94,
+          "usage": {
+            "type": "usd",
+            "usd": 0.0
+          },
+          "size_bytes": 3592
+        }
+      ],
+      "success": true
+    },
+    {
+      "view": "side",
+      "prompt": "super cute adorable chibi walker character mascot, side view, big round head, large sparkling eyes, tiny rounded body, mid-step walking pose, soft pastel casual outfit, rounded shapes, kawaii style, bright cheerful colors, clean pixel art, transparent background",
+      "attempts": [
+        {
+          "attempt": 1,
+          "ok": true,
+          "elapsed_s": 33.46,
+          "usage": {
+            "type": "usd",
+            "usd": 0.0
+          },
+          "size_bytes": 4429
+        }
+      ],
+      "success": true
+    }
+  ]
+}
