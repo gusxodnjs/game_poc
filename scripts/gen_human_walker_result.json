@@ -1,0 +1,43 @@
+{
+  "endpoint": "https://api.pixellab.ai/v1/generate-image-pixflux",
+  "total_calls": 2,
+  "total_usd": 0.0,
+  "results": [
+    {
+      "view": "front",
+      "prompt": "young adult human character in their early twenties, walker, front view standing pose facing camera, plain casual t-shirt and blue jeans, everyday sneakers, natural human body proportions four heads tall, 16-bit JRPG protagonist pixel art style like Pokemon Black White or Earthbound, Stardew Valley style human villager, neutral friendly face, short hair, clearly recognizable as a person, slight stylization, not chibi, not mascot, not animal, no big oversized head, transparent background, clean pixel art",
+      "attempts": [
+        {
+          "attempt": 1,
+          "ok": true,
+          "prompt_used": "young adult human character in their early twenties, walker, front view standing pose facing camera, plain casual t-shirt and blue jeans, everyday sneakers, natural human body proportions four heads tall, 16-bit JRPG protagonist pixel art style like Pokemon Black White or Earthbound, Stardew Valley style human villager, neutral friendly face, short hair, clearly recognizable as a person, slight stylization, not chibi, not mascot, not animal, no big oversized head, transparent background, clean pixel art",
+          "elapsed_s": 39.89,
+          "usage": {
+            "type": "usd",
+            "usd": 0.0
+          },
+          "size_bytes": 2291
+        }
+      ],
+      "success": true
+    },
+    {
+      "view": "side",
+      "prompt": "young adult human character in their early twenties, walker, side view profile standing ready to walk, plain casual t-shirt and blue jeans, everyday sneakers, natural human body proportions four heads tall, 16-bit JRPG protagonist pixel art style like Pokemon Black White or Earthbound, Stardew Valley style human villager, neutral friendly face, short hair, clearly recognizable as a person, slight stylization, not chibi, not mascot, not animal, no big oversized head, transparent background, clean pixel art",
+      "attempts": [
+        {
+          "attempt": 1,
+          "ok": true,
+          "prompt_used": "young adult human character in their early twenties, walker, side view profile standing ready to walk, plain casual t-shirt and blue jeans, everyday sneakers, natural human body proportions four heads tall, 16-bit JRPG protagonist pixel art style like Pokemon Black White or Earthbound, Stardew Valley style human villager, neutral friendly face, short hair, clearly recognizable as a person, slight stylization, not chibi, not mascot, not animal, no big oversized head, transparent background, clean pixel art",
+          "elapsed_s": 48.23,
+          "usage": {
+            "type": "usd",
+            "usd": 0.0
+          },
+          "size_bytes": 2390
+        }
+      ],
+      "success": true
+    }
+  ]
+}
