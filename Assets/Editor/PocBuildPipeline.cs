@@ -1,0 +1,68 @@
+using System.IO;
+using UnityEditor;
+using UnityEditor.Build;
+using UnityEditor.SceneManagement;
+using UnityEngine;
+
+public static class PocBuildPipeline
+{
+    private const string SceneDir = "Assets/Scenes";
+    private const string ScenePath = "Assets/Scenes/HelloScene.unity";
+    private const string BundleId = "com.gusxodnjs.terrapoc";
+    private const string BuildOutput = "build/ios";
+
+    [MenuItem("TERRA PoC/1. Setup Hello Scene")]
+    public static void SetupHelloScene()
+    {
+        if (!Directory.Exists(SceneDir)) Directory.CreateDirectory(SceneDir);
+
+        var scene = EditorSceneManager.NewScene(NewSceneSetup.DefaultGameObjects, NewSceneMode.Single);
+        var root = new GameObject("HelloRoot");
+        root.AddComponent<HelloWorld>();
+        EditorSceneManager.SaveScene(scene, ScenePath);
+
+        EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(ScenePath, true) };
+        Debug.Log("[POC] Scene saved: " + ScenePath);
+    }
+
+    [MenuItem("TERRA PoC/2. Configure iOS Player Settings")]
+    public static void ConfigureIOSPlayerSettings()
+    {
+        PlayerSettings.companyName = "TERRA";
+        PlayerSettings.productName = "TerraPoC";
+        PlayerSettings.SetApplicationIdentifier(NamedBuildTarget.iOS, BundleId);
+        PlayerSettings.iOS.targetOSVersionString = "13.0";
+        PlayerSettings.iOS.sdkVersion = iOSSdkVersion.DeviceSDK;
+        PlayerSettings.iOS.targetDevice = iOSTargetDevice.iPhoneOnly;
+        PlayerSettings.SetScriptingBackend(NamedBuildTarget.iOS, ScriptingImplementation.IL2CPP);
+        AssetDatabase.SaveAssets();
+        Debug.Log("[POC] iOS Player Settings configured (bundle=" + BundleId + ")");
+    }
+
+    [MenuItem("TERRA PoC/3. Build iOS Xcode Project")]
+    public static void BuildIOS()
+    {
+        if (!Directory.Exists(BuildOutput)) Directory.CreateDirectory(BuildOutput);
+
+        EditorUserBuildSettings.SwitchActiveBuildTarget(BuildTargetGroup.iOS, BuildTarget.iOS);
+
+        var options = new BuildPlayerOptions
+        {
+            scenes = new[] { ScenePath },
+            locationPathName = BuildOutput,
+            target = BuildTarget.iOS,
+            options = BuildOptions.None,
+        };
+
+        var report = BuildPipeline.BuildPlayer(options);
+        Debug.Log("[POC] Build result: " + report.summary.result + " | output: " + BuildOutput +
+                  " | duration: " + report.summary.totalTime + " | size: " + report.summary.totalSize);
+    }
+
+    public static void DoAll()
+    {
+        SetupHelloScene();
+        ConfigureIOSPlayerSettings();
+        BuildIOS();
+    }
+}
