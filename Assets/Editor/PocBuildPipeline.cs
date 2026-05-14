@@ -23,6 +23,8 @@ public static class PocBuildPipeline
         root.AddComponent<HelloWorld>();
         var gps = new GameObject("GpsRoot");
         gps.AddComponent<GpsCheck>();
+        var discovery = new GameObject("DiscoveryRoot");
+        discovery.AddComponent<DiscoveryDetection>();
         EditorSceneManager.SaveScene(scene, ScenePath);
 
         EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(ScenePath, true) };
