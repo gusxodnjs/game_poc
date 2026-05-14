@@ -19,6 +19,8 @@ public static class PocBuildPipeline
         var scene = EditorSceneManager.NewScene(NewSceneSetup.DefaultGameObjects, NewSceneMode.Single);
         var root = new GameObject("HelloRoot");
         root.AddComponent<HelloWorld>();
+        var gps = new GameObject("GpsRoot");
+        gps.AddComponent<GpsCheck>();
         EditorSceneManager.SaveScene(scene, ScenePath);
 
         EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(ScenePath, true) };

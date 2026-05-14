@@ -20,8 +20,11 @@ public static class PocPostProcessBuild
             var plist = new PlistDocument();
             plist.ReadFromFile(plistPath);
             plist.root.SetString("CFBundleDisplayName", DisplayName);
+            plist.root.SetString(
+                "NSLocationWhenInUseUsageDescription",
+                "산책 중 주변 종을 발견하려면 위치 정보가 필요합니다.");
             plist.WriteToFile(plistPath);
-            Debug.Log("[POC] CFBundleDisplayName=" + DisplayName);
+            Debug.Log("[POC] CFBundleDisplayName=" + DisplayName + " + NSLocationWhenInUseUsageDescription set");
         }
 
         var appiconDir = Path.Combine(buildPath, "Unity-iPhone", "Images.xcassets", "AppIcon.appiconset");
