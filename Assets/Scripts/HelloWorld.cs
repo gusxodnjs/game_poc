@@ -29,6 +29,11 @@ public class HelloWorld : MonoBehaviour
     private GUIStyle _labelStyle;
     private GUIStyle _shadowStyle;
 
+    private void Start()
+    {
+        Debug.Log("[POC] HelloWorld.Start");
+    }
+
     private void EnsureStyles()
     {
         // GUIStyle must be created inside OnGUI; cache between frames.
