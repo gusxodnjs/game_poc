@@ -62,6 +62,8 @@ public class SplashScreen : MonoBehaviour
         {
             alignment = TextAnchor.MiddleCenter,
             fontStyle = FontStyle.Bold,
+            wordWrap = false,
+            clipping = TextClipping.Overflow,
         };
         _titleStyle.normal.textColor = Color.white;
     }
@@ -79,8 +81,10 @@ public class SplashScreen : MonoBehaviour
             GUI.DrawTexture(new Rect(x, y, side, side), backgroundIcon, ScaleMode.ScaleToFit);
         }
 
-        _titleStyle.fontSize = Mathf.Max(48, Screen.height / 12);
-        Rect titleRect = new Rect(0f, Screen.height * 0.78f, Screen.width, Screen.height * 0.12f);
+        int fontSize = Mathf.Min(Screen.width / 10, Screen.height / 22);
+        _titleStyle.fontSize = fontSize;
+        float titleH = fontSize * 2f;
+        Rect titleRect = new Rect(0f, Screen.height * 0.78f, Screen.width, titleH);
         GUI.Label(titleRect, title, _titleStyle);
 
         GUI.color = Color.white;
