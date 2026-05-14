@@ -92,6 +92,8 @@ public static class PocBuildPipeline
         PlayerSettings.iOS.targetDevice = iOSTargetDevice.iPhoneOnly;
         PlayerSettings.iOS.locationUsageDescription = "산책 중 주변 종을 발견하려면 위치 정보가 필요합니다.";
         PlayerSettings.SetScriptingBackend(NamedBuildTarget.iOS, ScriptingImplementation.IL2CPP);
+        PlayerSettings.SplashScreen.show = false;
+        PlayerSettings.SplashScreen.showUnityLogo = false;
         AssetDatabase.SaveAssets();
         Debug.Log("[POC] iOS Player Settings configured (bundle=" + BundleId + ")");
     }
