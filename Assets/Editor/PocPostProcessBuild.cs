@@ -1,6 +1,5 @@
 using System.IO;
 using UnityEditor;
-using UnityEditor.Callbacks;
 using UnityEditor.iOS.Xcode;
 using UnityEngine;
 
@@ -9,7 +8,6 @@ public static class PocPostProcessBuild
     private const string DisplayName = "작은정복자들";
     private const string IconSourceDir = "Assets/AppIcon";
 
-    [PostProcessBuild(999)]
     public static void OnPostProcessBuild(BuildTarget target, string buildPath)
     {
         if (target != BuildTarget.iOS) return;
