@@ -25,18 +25,10 @@ public class SplashScreen : MonoBehaviour
     private float _alpha;
     private float _startTime;
     private Sparkle[] _sparkles;
-    private Texture2D _whiteTex;
 
-    private void Awake()
+    private void Start()
     {
-        if (backgroundIcon != null)
-        {
-            backgroundIcon.filterMode = FilterMode.Point;
-        }
-        if (backgroundLandscape != null)
-        {
-            backgroundLandscape.filterMode = FilterMode.Point;
-        }
+        Debug.Log("[POC] SplashScreen.Start");
 
         var cam = Camera.main;
         if (cam != null)
@@ -60,12 +52,10 @@ public class SplashScreen : MonoBehaviour
             };
         }
 
-        _whiteTex = new Texture2D(1, 1);
-        _whiteTex.SetPixel(0, 0, Color.white);
-        _whiteTex.Apply();
+        StartCoroutine(LoadNextSceneAfterDelay());
     }
 
-    private IEnumerator Start()
+    private IEnumerator LoadNextSceneAfterDelay()
     {
         yield return new WaitForSeconds(displayDuration + fadeDuration * 2f);
         SceneManager.LoadScene(nextScene);
@@ -117,8 +107,7 @@ public class SplashScreen : MonoBehaviour
             GUI.DrawTexture(new Rect(bgX, bgY, bgSide, bgSide), backgroundLandscape, ScaleMode.ScaleAndCrop);
 
             GUI.color = new Color(0f, 0f, 0f, _alpha * 0.25f);
-            GUI.DrawTexture(new Rect(0f, 0f, Screen.width, Screen.height), _whiteTex);
-            GUI.color = Color.white;
+            GUI.DrawTexture(new Rect(0f, 0f, Screen.width, Screen.height), Texture2D.whiteTexture);
         }
 
         DrawSparkles();
@@ -147,7 +136,7 @@ public class SplashScreen : MonoBehaviour
 
     private void DrawSparkles()
     {
-        if (_sparkles == null || _whiteTex == null) return;
+        if (_sparkles == null) return;
 
         for (int i = 0; i < _sparkles.Length; i++)
         {
@@ -158,7 +147,7 @@ public class SplashScreen : MonoBehaviour
             GUI.color = new Color(1f, 1f, 0.85f, a);
             float px = s.x * Screen.width - s.size / 2f;
             float py = s.y * Screen.height - s.size / 2f;
-            GUI.DrawTexture(new Rect(px, py, s.size, s.size), _whiteTex);
+            GUI.DrawTexture(new Rect(px, py, s.size, s.size), Texture2D.whiteTexture);
         }
     }
 }
