@@ -45,9 +45,11 @@ public class GpsCheck : MonoBehaviour
         while (true)
         {
             var d = Input.location.lastData;
+            string cellId = CellMapping.ToCellId(d.latitude, d.longitude);
+            double edge = CellMapping.DistanceToBoundaryMeters(d.latitude, d.longitude);
             _coords = string.Format(
-                "위도 {0:F6}\n경도 {1:F6}\n정확도 {2:F1}m",
-                d.latitude, d.longitude, d.horizontalAccuracy);
+                "위도 {0:F6}\n경도 {1:F6}\n정확도 {2:F1}m\n셀 {3}\n경계까지 {4:F1}m",
+                d.latitude, d.longitude, d.horizontalAccuracy, cellId, edge);
             yield return new WaitForSeconds(1f);
         }
     }
