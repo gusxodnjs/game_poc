@@ -10,6 +10,7 @@ public static class PocBuildPipeline
     private const string ScenePath = "Assets/Scenes/HelloScene.unity";
     private const string SplashScenePath = "Assets/Scenes/SplashScene.unity";
     private const string IconAssetPath = "Assets/AppIcon/icon_planet_v5_master_1024.png";
+    private const string LandscapeAssetPath = "Assets/AppIcon/splash_green_forest_master_1024.png";
     private const string BundleId = "com.gusxodnjs.terrapoc";
     private const string BuildOutput = "build/ios";
 
@@ -57,6 +58,17 @@ public static class PocBuildPipeline
         else
         {
             Debug.LogWarning("[POC] Splash icon not loaded: " + IconAssetPath);
+        }
+
+        AssetDatabase.ImportAsset(LandscapeAssetPath, ImportAssetOptions.ForceUpdate);
+        var landscape = AssetDatabase.LoadAssetAtPath<Texture2D>(LandscapeAssetPath);
+        if (landscape != null)
+        {
+            splash.backgroundLandscape = landscape;
+        }
+        else
+        {
+            Debug.LogWarning("[POC] Splash landscape not loaded: " + LandscapeAssetPath);
         }
 
         EditorSceneManager.SaveScene(scene, SplashScenePath);
