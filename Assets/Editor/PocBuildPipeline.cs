@@ -99,6 +99,11 @@ public static class PocBuildPipeline
         var report = BuildPipeline.BuildPlayer(options);
         Debug.Log("[POC] Build result: " + report.summary.result + " | output: " + BuildOutput +
                   " | duration: " + report.summary.totalTime + " | size: " + report.summary.totalSize);
+
+        if (report.summary.result == UnityEditor.Build.Reporting.BuildResult.Succeeded)
+        {
+            PocPostProcessBuild.OnPostProcessBuild(BuildTarget.iOS, BuildOutput);
+        }
     }
 
     public static void DoAll()
