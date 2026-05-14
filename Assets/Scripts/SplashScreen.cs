@@ -4,6 +4,7 @@ using UnityEngine.SceneManagement;
 
 public class SplashScreen : MonoBehaviour
 {
+    public Texture2D backgroundLandscape;
     public Texture2D backgroundIcon;
     public string title = "작은정복자들";
     public string nextScene = "HelloScene";
@@ -31,6 +32,10 @@ public class SplashScreen : MonoBehaviour
         if (backgroundIcon != null)
         {
             backgroundIcon.filterMode = FilterMode.Point;
+        }
+        if (backgroundLandscape != null)
+        {
+            backgroundLandscape.filterMode = FilterMode.Point;
         }
 
         var cam = Camera.main;
@@ -100,6 +105,21 @@ public class SplashScreen : MonoBehaviour
     private void OnGUI()
     {
         EnsureStyles();
+
+        if (backgroundLandscape != null)
+        {
+            float elapsedBg = Time.time - _startTime;
+            float zoomBg = 1f + Mathf.Clamp01(elapsedBg / 6f) * 0.08f;
+            int bgSide = (int)(Mathf.Max(Screen.width, Screen.height) * zoomBg * 1.1f);
+            float bgX = (Screen.width - bgSide) / 2f;
+            float bgY = (Screen.height - bgSide) / 2f;
+            GUI.color = new Color(1f, 1f, 1f, _alpha);
+            GUI.DrawTexture(new Rect(bgX, bgY, bgSide, bgSide), backgroundLandscape, ScaleMode.ScaleAndCrop);
+
+            GUI.color = new Color(0f, 0f, 0f, _alpha * 0.25f);
+            GUI.DrawTexture(new Rect(0f, 0f, Screen.width, Screen.height), _whiteTex);
+            GUI.color = Color.white;
+        }
 
         DrawSparkles();
 
