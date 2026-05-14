@@ -8,6 +8,8 @@ public static class PocBuildPipeline
 {
     private const string SceneDir = "Assets/Scenes";
     private const string ScenePath = "Assets/Scenes/HelloScene.unity";
+    private const string SplashScenePath = "Assets/Scenes/SplashScene.unity";
+    private const string IconAssetPath = "Assets/AppIcon/icon_planet_v5_master_1024.png";
     private const string BundleId = "com.gusxodnjs.terrapoc";
     private const string BuildOutput = "build/ios";
 
@@ -23,6 +25,44 @@ public static class PocBuildPipeline
 
         EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(ScenePath, true) };
         Debug.Log("[POC] Scene saved: " + ScenePath);
+    }
+
+    [MenuItem("TERRA PoC/1b. Setup Splash Scene")]
+    public static void SetupSplashScene()
+    {
+        if (!Directory.Exists(SceneDir)) Directory.CreateDirectory(SceneDir);
+
+        var scene = EditorSceneManager.NewScene(NewSceneSetup.DefaultGameObjects, NewSceneMode.Single);
+
+        var cam = Camera.main;
+        if (cam != null)
+        {
+            cam.clearFlags = CameraClearFlags.SolidColor;
+            cam.backgroundColor = new Color32(0x08, 0x0d, 0x1f, 0xff);
+        }
+
+        var splashRoot = new GameObject("SplashRoot");
+        var splash = splashRoot.AddComponent<SplashScreen>();
+
+        AssetDatabase.ImportAsset(IconAssetPath, ImportAssetOptions.ForceUpdate);
+        var tex = AssetDatabase.LoadAssetAtPath<Texture2D>(IconAssetPath);
+        if (tex != null)
+        {
+            splash.backgroundIcon = tex;
+        }
+        else
+        {
+            Debug.LogWarning("[POC] Splash icon not loaded: " + IconAssetPath);
+        }
+
+        EditorSceneManager.SaveScene(scene, SplashScenePath);
+
+        EditorBuildSettings.scenes = new[]
+        {
+            new EditorBuildSettingsScene(SplashScenePath, true),
+            new EditorBuildSettingsScene(ScenePath, true),
+        };
+        Debug.Log("[POC] Splash scene saved: " + SplashScenePath);
     }
 
     [MenuItem("TERRA PoC/2. Configure iOS Player Settings")]
@@ -48,7 +88,7 @@ public static class PocBuildPipeline
 
         var options = new BuildPlayerOptions
         {
-            scenes = new[] { ScenePath },
+            scenes = new[] { SplashScenePath, ScenePath },
             locationPathName = BuildOutput,
             target = BuildTarget.iOS,
             options = BuildOptions.None,
@@ -62,6 +102,7 @@ public static class PocBuildPipeline
     public static void DoAll()
     {
         SetupHelloScene();
+        SetupSplashScene();
         ConfigureIOSPlayerSettings();
         BuildIOS();
     }
