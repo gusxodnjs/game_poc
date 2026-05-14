@@ -76,6 +76,7 @@ public static class PocBuildPipeline
         PlayerSettings.iOS.targetOSVersionString = "13.0";
         PlayerSettings.iOS.sdkVersion = iOSSdkVersion.DeviceSDK;
         PlayerSettings.iOS.targetDevice = iOSTargetDevice.iPhoneOnly;
+        PlayerSettings.iOS.locationUsageDescription = "산책 중 주변 종을 발견하려면 위치 정보가 필요합니다.";
         PlayerSettings.SetScriptingBackend(NamedBuildTarget.iOS, ScriptingImplementation.IL2CPP);
         AssetDatabase.SaveAssets();
         Debug.Log("[POC] iOS Player Settings configured (bundle=" + BundleId + ")");
