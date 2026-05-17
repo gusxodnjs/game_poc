@@ -79,13 +79,22 @@ public class GpsCheck : MonoBehaviour
     private void OnGUI()
     {
         EnsureStyles();
-        int size = Mathf.Max(22, Screen.height / 32);
+        // 지도가 화면 중앙을 차지하므로 GPS 좌표 라벨은 좌측 상단으로 이동 (M1 지도 셸 통합).
+        // 가로 좌측 38%, 세로 상단 28% 영역, 좌측 정렬, 폰트도 한 단계 작게.
+        int size = Mathf.Max(16, Screen.height / 48);
         _labelStyle.fontSize = size;
         _shadowStyle.fontSize = size;
+        _labelStyle.alignment = TextAnchor.UpperLeft;
+        _shadowStyle.alignment = TextAnchor.UpperLeft;
 
+        // iOS safe area 고려 (노치/Dynamic Island)
+        Rect safe = Screen.safeArea;
+        // OnGUI 좌표는 좌상단 원점, 아래로 +y. Screen.safeArea 는 좌하단 원점이라 변환 필요.
+        float topY = Screen.height - (safe.y + safe.height) + 8f;
+        float leftX = safe.x + 12f;
+        float w = Screen.width * 0.42f;
         float h = Screen.height * 0.30f;
-        float y = Screen.height - h - 20f;
-        Rect rect = new Rect(0f, y, Screen.width, h);
+        Rect rect = new Rect(leftX, topY, w, h);
         Rect shadow = new Rect(rect.x + 2f, rect.y + 2f, rect.width, rect.height);
 
         string text = _status + (string.IsNullOrEmpty(_coords) ? "" : "\n\n" + _coords);

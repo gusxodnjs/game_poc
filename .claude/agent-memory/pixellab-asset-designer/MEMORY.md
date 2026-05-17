@@ -1,0 +1,7 @@
+- [Project Style Guide](project_style_guide.md) — 작은정복자들 PoC 픽셀아트 톤/팔레트/해상도 표준
+- [PixelLab Generation Pattern](pixellab_generation_pattern.md) — pixflux 엔드포인트 직접 호출 스크립트 패턴 (Python urllib)
+- [PixelLab Min Canvas Quirk](pixellab_min_canvas_quirk.md) — 32x32 미만 사이즈는 32x32로 생성 후 PIL 다운스케일
+- [PixelLab Polling Quirk](pixellab_polling_quirk.md) — PixelLab MCP가 폴링 응답을 PNG 자리에 저장하는 버그 — 70B 파일 의심 신호
+- [PixelLab No-Background Quirk](pixellab_no_background_quirk.md) — `no_background:true`가 솔리드 배경을 반환할 때 corner-color 알파 클리핑 후처리
+- [Asset Verification Checklist](asset_verification_checklist.md) — 생성 후 file/sips 검증 단계
+- [Asset Directory Conventions](asset_directory_conventions.md) — assets/ 폴더 구조와 .meta 파일 처리
