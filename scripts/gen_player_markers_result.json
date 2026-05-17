@@ -1,0 +1,49 @@
+{
+  "endpoint": "https://api.pixellab.ai/v1/generate-image-pixflux",
+  "total_calls": 2,
+  "total_usd": 0.0,
+  "results": [
+    {
+      "key": "shadow",
+      "out": "assets/characters/player_shadow_32x16.png",
+      "generated_size": "32x32",
+      "final_size": "32x16",
+      "prompt": "pixel art top-down soft circular shadow ellipse, semi-transparent dark gray, 32x16 pixels, no background, transparent background, subtle edge fade, isolated, simple flat shape, centered horizontal oval",
+      "attempts": [
+        {
+          "attempt": 1,
+          "ok": true,
+          "elapsed_s": 20.54,
+          "usage": {
+            "type": "usd",
+            "usd": 0.0
+          },
+          "raw_bytes": 747,
+          "final_bytes": 436
+        }
+      ],
+      "success": true
+    },
+    {
+      "key": "accuracy_ring",
+      "out": "assets/characters/player_accuracy_ring_64x64.png",
+      "generated_size": "64x64",
+      "final_size": "64x64",
+      "prompt": "pixel art thin blue circle outline, transparent center, light blue ring, 64x64 pixels, no background, transparent background, soft glow on edge, isolated, 1 to 2 pixel thick stroke, perfect circle, hollow center, no fill",
+      "attempts": [
+        {
+          "attempt": 1,
+          "ok": true,
+          "elapsed_s": 48.49,
+          "usage": {
+            "type": "usd",
+            "usd": 0.0
+          },
+          "raw_bytes": 3181,
+          "final_bytes": 3181
+        }
+      ],
+      "success": true
+    }
+  ]
+}

@@ -95,3 +95,4 @@ node_modules/
 *.local
 GoogleService-Info.plist
 google-services.json
+scripts/__pycache__/

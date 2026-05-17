@@ -1,0 +1,6 @@
+- [PixelLab MCP 함정](feedback_pixellab_quirks.md) — PNG 다운로드에 JSON 에러 본문이 섞일 수 있고, 256×256도 PoC 픽셀아트에 충분
+- [스플래시 리뉴얼 2026-05](project_splash_renewal_2026_05.md) — A안(황폐→푸른 지구) 8프레임, 카피 결정사항 포함, f01.png 손상 미해결
+- [지도+플레이어 아바타 2026-05](project_map_player_avatar_2026_05.md) — 피크민 블룸 스타일, OSM 자체 타일 1순위, M1~M4 마일스톤, walker 자산 재사용
+- [행성 선택 + 시나리오 2026-05](project_planet_select_scenario_2026_05.md) — (구) PlanetSelectScene 카드 선택형. 2026-05-17 GPS 시드형으로 대체됨
+- [GPS 시드 행성 시스템 2026-05](project_gps_seed_planet_2026_05.md) — "내가 걷는 곳이 내 행성". 1km 그리드 hash → 행성 자동 결정, PlanetIntroScene
+- [사용자 협업 패턴](feedback_user_workflow.md) — 백그라운드 위임, 완료 보고만, PM 재량 위임, 새 이슈만 명시 보고
