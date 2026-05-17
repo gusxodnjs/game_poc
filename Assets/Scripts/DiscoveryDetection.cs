@@ -2,6 +2,8 @@ using UnityEngine;
 
 public class DiscoveryDetection : MonoBehaviour
 {
+    // 폴백 풀 — GameSession.CurrentPlanet 가 null 일 때만 사용 (디버그/Hello 단독 실행).
+    // 시나리오 v2 도입 후 정상 흐름에서는 PlanetIntroScene 이 행성을 결정 → 종 풀 주입.
     public string[] speciesNames = new[]
     {
         "민들레", "강아지풀", "흰토끼풀", "벚꽃", "무당벌레", "꿀벌",
@@ -17,6 +19,20 @@ public class DiscoveryDetection : MonoBehaviour
     private GUIStyle _msgStyle;
     private GUIStyle _msgShadowStyle;
 
+    /// <summary>
+    /// GameSession.CurrentPlanet 의 speciesPool 을 우선 사용. 미초기화면 inspector 의 speciesNames.
+    /// 둘 다 비어 있으면 빈 배열 반환 (호출측이 length 체크).
+    /// </summary>
+    private string[] ResolveSpeciesPool()
+    {
+        var planet = GameSession.Instance != null ? GameSession.Instance.CurrentPlanet : null;
+        if (planet != null && planet.speciesPool != null && planet.speciesPool.Length > 0)
+        {
+            return planet.speciesPool;
+        }
+        return speciesNames ?? System.Array.Empty<string>();
+    }
+
     private void Update()
     {
         if (Input.location.status != LocationServiceStatus.Running) return;
@@ -26,9 +42,13 @@ public class DiscoveryDetection : MonoBehaviour
 
         if (!string.IsNullOrEmpty(_prevCellId) && currentCell != _prevCellId)
         {
-            string species = speciesNames[_rng.Next(speciesNames.Length)];
-            _discoveryMessage = "발견! " + species;
-            _discoveryStartedAt = Time.time;
+            var pool = ResolveSpeciesPool();
+            if (pool.Length > 0)
+            {
+                string species = pool[_rng.Next(pool.Length)];
+                _discoveryMessage = "발견! " + species;
+                _discoveryStartedAt = Time.time;
+            }
         }
         _prevCellId = currentCell;
     }
