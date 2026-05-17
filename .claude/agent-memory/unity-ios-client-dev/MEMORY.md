@@ -1,0 +1,4 @@
+- [TERRA PoC Project](project_terra_poc.md) — Unity 6 + iOS, IMGUI-only, PocBuildPipeline 메뉴 흐름
+- [No dynamic textures](feedback_no_dynamic_textures.md) — 텍스처는 무조건 디스크 PNG → LoadImage 경유
+- [Map shell architecture](map_shell_architecture.md) — 자체 OSM raster tile 방식 (외부 SDK 0)
+- [Planet seed system](planet_seed_system.md) — GPS 1km 셀 hash → 행성 자동 결정. Splash → PlanetIntro → Hello 순서

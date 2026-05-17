@@ -1,0 +1,6 @@
+- [Planets v1 확정안](project_planets_v1.md) — volcano/ice/desert 원시 3종 + 시작 종 풀 + tint_hex 매핑 (SSOT 표, 2026-05-17 재작성)
+- [톤 가이드](feedback_tone_brand.md) — 피크민 블룸 + 스타듀밸리, SF 어휘 금지, "걸음" 앵커 유지
+- [PoC v7.2 스코프](project_poc_scope.md) — 포함/제외 영역 경계선 (IMGUI까지, 컷신·사운드·도감 제외)
+- [시나리오 v1 원본 위치](reference_scenario_v1.md) — docs/scenario_v1.md (PlanetSelect 카피 SSOT)
+- [시나리오 v2 원본 위치](reference_scenario_v2.md) — docs/scenario_v2.md (GPS 시드 + PlanetIntroScene SSOT)
+- [자동 이름 풀 v2](project_auto_name_pool_v2.md) — 형용사 24 × type별 명사 8 + 블랙리스트 19 (자동 이름 SSOT)

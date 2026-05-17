@@ -1,0 +1,62 @@
+{
+  "endpoint": "https://api.pixellab.ai/v1/generate-image-pixflux",
+  "total_calls": 3,
+  "total_usd": 0.0,
+  "postprocess": "alpha-clipped background color (corner sample, manhattan tol=12) — PixelLab's no_background:true returned solid pale fills, so corner color was forced to alpha=0",
+  "results": [
+    {
+      "key": "volcano",
+      "out": "assets/world/planet_card_volcano_256.png",
+      "size": "256x256",
+      "prompt": "pixel art round planet sphere, primitive volcanic world, surface texture of cooled black lava with cracks glowing faintly red, thin wisps of white steam, dark gray and reddish-brown tones #5C3B33, isolated round planet centered on transparent background, no buildings no vegetation no people no creatures, primordial wasteland, soft pixel shading, simple sphere shading",
+      "attempts": [
+        {
+          "attempt": 1,
+          "ok": true,
+          "elapsed_s": 30.88,
+          "usage": { "type": "usd", "usd": 0.0 },
+          "raw_bytes": 16055,
+          "final_bytes": 15098,
+          "alpha_clip": { "bg_rgb": [254, 253, 252], "cleared_pct": 41.66 }
+        }
+      ],
+      "success": true
+    },
+    {
+      "key": "ice",
+      "out": "assets/world/planet_card_ice_256.png",
+      "size": "256x256",
+      "prompt": "pixel art round planet sphere, primitive frozen world, surface texture of pale blue-gray ice plains with faint cracks and wind streaks, deep silence, cold tones #6E8AA0, isolated round planet centered on transparent background, no buildings no vegetation no people no creatures, primordial frozen wasteland, soft pixel shading, simple sphere shading",
+      "attempts": [
+        {
+          "attempt": 1,
+          "ok": true,
+          "elapsed_s": 19.35,
+          "usage": { "type": "usd", "usd": 0.0 },
+          "raw_bytes": 8433,
+          "final_bytes": 7456,
+          "alpha_clip": { "bg_rgb": [219, 244, 253], "cleared_pct": 45.29 }
+        }
+      ],
+      "success": true
+    },
+    {
+      "key": "desert",
+      "out": "assets/world/planet_card_desert_256.png",
+      "size": "256x256",
+      "prompt": "pixel art round planet sphere, primitive desert world, surface texture of ochre cracked dry earth and endless sand plains, warm sun, yellow-brown tones #B89968, isolated round planet centered on transparent background, no buildings no vegetation no palm trees no oasis no people no creatures, primordial barren wasteland, soft pixel shading, simple sphere shading",
+      "attempts": [
+        {
+          "attempt": 1,
+          "ok": true,
+          "elapsed_s": 19.96,
+          "usage": { "type": "usd", "usd": 0.0 },
+          "raw_bytes": 18238,
+          "final_bytes": 17028,
+          "alpha_clip": { "bg_rgb": [253, 253, 251], "cleared_pct": 39.36 }
+        }
+      ],
+      "success": true
+    }
+  ]
+}

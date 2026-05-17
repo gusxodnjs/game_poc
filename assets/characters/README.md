@@ -64,6 +64,34 @@ PR #9에서 만들어진 chibi 애니메이션을 새 human 정적 기반으로 
 - 생성 스크립트: `scripts/gen_human_walker.py`, `scripts/gen_human_walker_anim.py`
 - 상세 로그: `scripts/gen_human_walker_result.json`, `scripts/gen_human_walker_anim_result.json`
 
+## 플레이어 마커 (지도 표시용)
+
+피크민 블룸 스타일 지도 위에서 walker 캐릭터 발밑/주변에 겹쳐 그릴 보조 마커.
+Unity Tilemap/지도 위에 walker 스프라이트와 함께 배치된다.
+
+| 파일 | 사이즈 | 용도 |
+|---|---|---|
+| `player_shadow_32x16.png` | 32×16 | 캐릭터 발밑 타원 그림자. walker 발 중앙에 정렬해서 배치 |
+| `player_accuracy_ring_64x64.png` | 64×64 | GPS 정확도가 낮을 때 캐릭터 둘레에 표시되는 얇은 파란 외곽선 원 |
+
+**프롬프트 (player markers)**
+
+- shadow: `pixel art top-down soft circular shadow ellipse, semi-transparent dark gray, 32x16 pixels, no background, transparent background, subtle edge fade, isolated, simple flat shape, centered horizontal oval`
+- accuracy_ring: `pixel art thin blue circle outline, transparent center, light blue ring, 64x64 pixels, no background, transparent background, soft glow on edge, isolated, 1 to 2 pixel thick stroke, perfect circle, hollow center, no fill`
+
+**기술 메모**
+
+- PixelLab 최소 캔버스가 32×32라 그림자는 32×32로 생성 후 PIL nearest-neighbor 리샘플로 32×16 다운스케일 (`scripts/gen_player_markers.py`의 `postprocess`). 단색에 가까운 평탄한 그림자라 nearest 다운샘플로도 깨짐 없음.
+- accuracy_ring은 64×64 직접 생성.
+- 둘 다 `no_background=true`, `text_guidance_scale=10.0`. 1회 시도로 성공.
+- 검증: `file` 명령 PNG 매직바이트 통과, `sips` pixelWidth/Height 정확 (32×16, 64×64), 파일 크기 436B/3181B (PixelLab 폴링 에러 본문 70B 케이스 아님).
+- Unity Import 권장: Filter Mode `Point`, Compression `None`, Pixels Per Unit 64.
+  - shadow의 pivot은 `Center` (캐릭터 발 좌표에 직접 배치).
+  - accuracy_ring의 pivot도 `Center` (캐릭터 위치 = ring 중심).
+  - shadow는 SpriteRenderer alpha를 0.4~0.6 정도로 낮추면 더 자연스러운 반투명감 (생성 결과가 거의 단색 짙은 회색이라 코드에서 alpha 조절 권장).
+
+생성일: 2026-05-17. 스크립트: `scripts/gen_player_markers.py`. 로그: `scripts/gen_player_markers_result.json`. 비용: $0.00 (`usage.usd` 합계, 베타/무료 티어).
+
 ## 이전 시안 (참고)
 
 - 원본 (PR #8, 평범 톤): `feat/pixellab-chars-tiles-ui` 브랜치
