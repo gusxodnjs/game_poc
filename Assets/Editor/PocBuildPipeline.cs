@@ -54,10 +54,26 @@ public static class PocBuildPipeline
         }
 
         var map = new GameObject("MapRoot");
-        map.AddComponent<MapView>();
+        var mapView = map.AddComponent<MapView>();
 
         var gps = new GameObject("GpsRoot");
-        gps.AddComponent<GpsCheck>();
+        var gpsCheck = gps.AddComponent<GpsCheck>();
+
+        // GpsCheck.mapView SerializeField 에 MapView 참조 직접 주입.
+        // 이 와이어링이 빠지면 GPS 갱신이 MapView.SetCenter 를 호출하지 못해
+        // 지도가 서울시청(initialLat/Lon) 고정으로 보임.
+        var so = new SerializedObject(gpsCheck);
+        var prop = so.FindProperty("mapView");
+        if (prop != null)
+        {
+            prop.objectReferenceValue = mapView;
+            so.ApplyModifiedPropertiesWithoutUndo();
+        }
+        else
+        {
+            Debug.LogWarning("[POC] GpsCheck.mapView SerializedProperty not found — GPS→MapView wiring skipped.");
+        }
+
         var discovery = new GameObject("DiscoveryRoot");
         discovery.AddComponent<DiscoveryDetection>();
         EditorSceneManager.SaveScene(scene, ScenePath);

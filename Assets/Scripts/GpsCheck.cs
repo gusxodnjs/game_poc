@@ -3,8 +3,19 @@ using UnityEngine;
 
 public class GpsCheck : MonoBehaviour
 {
+    [Header("지도 연동")]
+    [Tooltip("GPS 좌표가 갱신될 때 SetCenter 를 호출할 MapView. 비어있으면 호출 생략.")]
+    [SerializeField] private MapView mapView;
+
+    [Tooltip("이 위경도 차이 미만이면 SetCenter 호출 생략 (호출 폭주 방지). 0 이면 항상 호출.")]
+    [SerializeField] private double minMoveDegrees = 0.0001;
+
     private string _status = "GPS: 초기화 대기";
     private string _coords = "";
+
+    // 마지막으로 SetCenter 에 넘긴 좌표 (debounce 용). NaN = 미설정.
+    private double _lastSentLat = double.NaN;
+    private double _lastSentLon = double.NaN;
 
     private GUIStyle _labelStyle;
     private GUIStyle _shadowStyle;
@@ -50,8 +61,37 @@ public class GpsCheck : MonoBehaviour
             _coords = string.Format(
                 "위도 {0:F6}\n경도 {1:F6}\n정확도 {2:F1}m\n셀 {3}\n경계까지 {4:F1}m",
                 d.latitude, d.longitude, d.horizontalAccuracy, cellId, edge);
+
+            UpdateMapCenter(d.latitude, d.longitude);
+
             yield return new WaitForSeconds(1f);
         }
+    }
+
+    /// <summary>
+    /// GPS 갱신 좌표를 MapView 중심으로 반영.
+    /// 가드:
+    ///   - mapView 미연결 → 무시 (NRE 방지)
+    ///   - (0,0) 부근 sentinel → 무시 (locationService 초기 프레임)
+    ///   - 직전 호출과 minMoveDegrees 미만 차이 → 무시 (SetCenter 호출 폭주 방지)
+    /// </summary>
+    private void UpdateMapCenter(double lat, double lon)
+    {
+        if (mapView == null) return;
+
+        // 위경도 절대값이 모두 0.001 미만이면 lastData 가 아직 채워지지 않은 sentinel.
+        if (System.Math.Abs(lat) < 0.001 && System.Math.Abs(lon) < 0.001) return;
+
+        if (!double.IsNaN(_lastSentLat) && minMoveDegrees > 0.0)
+        {
+            double dLat = System.Math.Abs(lat - _lastSentLat);
+            double dLon = System.Math.Abs(lon - _lastSentLon);
+            if (dLat < minMoveDegrees && dLon < minMoveDegrees) return;
+        }
+
+        mapView.SetCenter(lat, lon);
+        _lastSentLat = lat;
+        _lastSentLon = lon;
     }
 
     private void OnDestroy()
