@@ -1,0 +1,69 @@
+{
+  "endpoint": "https://api.pixellab.ai/v1/generate-image-pixflux",
+  "size": 256,
+  "retry_frame_count": 3,
+  "total_calls": 3,
+  "total_usd": 0.0,
+  "results": [
+    {
+      "index": 7,
+      "file": "Assets/AppIcon/splash_anim_v2_bigbang_256_f07.png",
+      "prompt": "pixel art, 256x256, dark cosmic background #080d1f, top-down centered composition, absolutely no text, no letters, no numbers, no watermark, no signature, no logo, no UI, no captions, no labels, limited palette, crisp pixel edges, no anti-aliasing, scene shows roughly 14 small separate irregular rocky debris chunks scattered across the canvas, each chunk only 4 to 8 pixels wide, in muted brown #5C4A3A and dark grey #4a4a52, arranged in a loose ring at 40 to 60 percent of canvas radius from the center, every chunk is a distinct individual piece NOT touching or merging with any other, a tiny faint circular halo glow only 30 pixels wide at exact center in dim grey-brown #3a3028, short motion-trail streaks behind each chunk pointing inward toward the center, ABSOLUTELY NO planet, NO sphere, NO rings around any object, NO Saturn, NO completed celestial body, the central area is mostly empty space with only the faint halo glow, debris pre-accretion state, no text, no letters, no numbers, no watermark, no signature anywhere",
+      "attempts": [
+        {
+          "attempt": 1,
+          "ok": true,
+          "elapsed_s": 18.79,
+          "usage": {
+            "type": "usd",
+            "usd": 0.0
+          },
+          "size_bytes": 29473
+        }
+      ],
+      "success": true,
+      "final_size_bytes": 29473,
+      "final_usd": 0.0
+    },
+    {
+      "index": 8,
+      "file": "Assets/AppIcon/splash_anim_v2_bigbang_256_f08.png",
+      "prompt": "pixel art, 256x256, dark cosmic background #080d1f, top-down centered composition, absolutely no text, no letters, no numbers, no watermark, no signature, no logo, no UI, no captions, no labels, limited palette, crisp pixel edges, no anti-aliasing, scene shows an irregular lumpy proto-mass at center about 50 pixels wide forming from merged debris, rough uneven silhouette NOT a perfect sphere, dark brown #4a3a2c surface with bright hot orange #d05030 magma cracks across it, glowing accretion rim, a few small remaining debris chunks still drifting inward at 30 percent radius from the proto-mass, dark cosmic background, absolutely no text, no letters, no numbers, no watermark anywhere",
+      "attempts": [
+        {
+          "attempt": 1,
+          "ok": true,
+          "elapsed_s": 35.87,
+          "usage": {
+            "type": "usd",
+            "usd": 0.0
+          },
+          "size_bytes": 27165
+        }
+      ],
+      "success": true,
+      "final_size_bytes": 27165,
+      "final_usd": 0.0
+    },
+    {
+      "index": 11,
+      "file": "Assets/AppIcon/splash_anim_v2_bigbang_256_f11.png",
+      "prompt": "pixel art, 256x256, dark cosmic background #080d1f, top-down centered composition, absolutely no text, no letters, no numbers, no watermark, no signature, no logo, no UI, no captions, no labels, limited palette, crisp pixel edges, no anti-aliasing, scene shows a final primitive desolate planet at exact center about 160 pixels in diameter, base crust in grey-brown #5C4A3A, dark crack veins #2E2520 across the surface, deep crater shadows in #1A1410, no magma glow no atmosphere no clouds, subtle stone highlight #A89888 on the upper-left side hinting at distant starlight, dead silent static surface, scattered 18 background stars at low alpha across the dark cosmic backdrop, completely empty space around the planet, absolutely no text, no letters, no numbers, no watermark, no signature, no captions, no labels anywhere in the image",
+      "attempts": [
+        {
+          "attempt": 1,
+          "ok": true,
+          "elapsed_s": 21.13,
+          "usage": {
+            "type": "usd",
+            "usd": 0.0
+          },
+          "size_bytes": 17293
+        }
+      ],
+      "success": true,
+      "final_size_bytes": 17293,
+      "final_usd": 0.0
+    }
+  ]
+}
