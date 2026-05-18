@@ -29,6 +29,17 @@ public static class PocBuildPipeline
         "Assets/world/planet_card_desert_256.png",
     };
 
+    // 플레이어 아바타 (화면 중앙 고정 마커, IMGUI)
+    private static readonly string[] PlayerIdlePaths = new[]
+    {
+        "Assets/characters/walker_front_idle_frame0_64x64.png",
+        "Assets/characters/walker_front_idle_frame1_64x64.png",
+        "Assets/characters/walker_front_idle_frame2_64x64.png",
+        "Assets/characters/walker_front_idle_frame3_64x64.png",
+    };
+    private const string PlayerRingPath = "Assets/characters/player_accuracy_ring_64x64.png";
+    private const string PlayerShadowPath = "Assets/characters/player_shadow_32x16.png";
+
     private const string BundleId = "com.gusxodnjs.terrapoc";
     private const string BuildOutput = "build/ios";
 
@@ -76,6 +87,29 @@ public static class PocBuildPipeline
 
         var discovery = new GameObject("DiscoveryRoot");
         discovery.AddComponent<DiscoveryDetection>();
+
+        // PlayerAvatar — 화면 중앙 고정 마커. IMGUI 로 ring + shadow + idle 4프레임 그리기.
+        // 자산은 모두 Assets/characters/ 에 있는 PNG 를 GUI.DrawTexture 로 직접 사용.
+        // (런타임에 AssetDatabase 불가하므로 SerializeField 로 주입.)
+        EnsurePlayerTextureSettings();
+
+        var player = new GameObject("PlayerRoot");
+        var avatar = player.AddComponent<PlayerAvatar>();
+        var idleTex = new Texture2D[PlayerIdlePaths.Length];
+        int idleLoaded = 0;
+        for (int i = 0; i < PlayerIdlePaths.Length; i++)
+        {
+            idleTex[i] = AssetDatabase.LoadAssetAtPath<Texture2D>(PlayerIdlePaths[i]);
+            if (idleTex[i] != null) idleLoaded++;
+            else Debug.LogWarning("[POC] Player idle frame not loaded: " + PlayerIdlePaths[i]);
+        }
+        avatar.idleFrames = idleTex;
+        avatar.accuracyRingTex = AssetDatabase.LoadAssetAtPath<Texture2D>(PlayerRingPath);
+        avatar.shadowTex = AssetDatabase.LoadAssetAtPath<Texture2D>(PlayerShadowPath);
+        Debug.Log("[POC] PlayerAvatar wired: idle=" + idleLoaded + "/" + PlayerIdlePaths.Length +
+                  ", ring=" + (avatar.accuracyRingTex != null) +
+                  ", shadow=" + (avatar.shadowTex != null));
+
         EditorSceneManager.SaveScene(scene, ScenePath);
 
         UpdateBuildScenes();
@@ -203,6 +237,40 @@ public static class PocBuildPipeline
         var names = new List<string>();
         foreach (var s in ordered) names.Add(Path.GetFileNameWithoutExtension(s.path));
         Debug.Log("[POC] EditorBuildSettings.scenes: " + string.Join(" → ", names));
+    }
+
+    /// <summary>
+    /// 플레이어 아바타 PNG 텍스처 import 설정 — Default (GUI.DrawTexture 용),
+    /// Point filter, no mipmap, Alpha is Transparency.
+    /// IMGUI 로 GUI.DrawTexture 호출하므로 Sprite 가 아닌 Default 텍스처 타입.
+    /// </summary>
+    private static void EnsurePlayerTextureSettings()
+    {
+        var paths = new List<string>(PlayerIdlePaths);
+        paths.Add(PlayerRingPath);
+        paths.Add(PlayerShadowPath);
+
+        foreach (var path in paths)
+        {
+            if (!File.Exists(path))
+            {
+                Debug.LogWarning("[POC] Player asset missing: " + path);
+                continue;
+            }
+            AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate);
+            var ti = AssetImporter.GetAtPath(path) as TextureImporter;
+            if (ti == null) continue;
+            bool dirty = false;
+            if (ti.textureType != TextureImporterType.Default) { ti.textureType = TextureImporterType.Default; dirty = true; }
+            if (ti.filterMode != FilterMode.Point) { ti.filterMode = FilterMode.Point; dirty = true; }
+            if (ti.mipmapEnabled) { ti.mipmapEnabled = false; dirty = true; }
+            if (!ti.alphaIsTransparency) { ti.alphaIsTransparency = true; dirty = true; }
+            if (dirty)
+            {
+                ti.SaveAndReimport();
+                Debug.Log("[POC] Player texture import settings updated: " + path);
+            }
+        }
     }
 
     /// <summary>
