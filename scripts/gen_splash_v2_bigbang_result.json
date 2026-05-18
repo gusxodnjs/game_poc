@@ -1,0 +1,249 @@
+{
+  "endpoint": "https://api.pixellab.ai/v1/generate-image-pixflux",
+  "size": 256,
+  "frame_count": 12,
+  "total_calls": 12,
+  "total_usd": 0.0,
+  "results": [
+    {
+      "index": 0,
+      "file": "Assets/AppIcon/splash_anim_v2_bigbang_256_f00.png",
+      "prompt": "pixel art, 256x256, dark cosmic background #080d1f, top-down centered composition, no text, no UI, no logo, limited palette, crisp pixel edges, no anti-aliasing, empty deep cosmic void, scattered 18 tiny faint stars in muted white #c8d2e0 at alpha 30%, absolute stillness, no central object, balanced negative space",
+      "attempts": [
+        {
+          "attempt": 1,
+          "ok": true,
+          "elapsed_s": 23.66,
+          "usage": {
+            "type": "usd",
+            "usd": 0.0
+          },
+          "size_bytes": 3342
+        }
+      ],
+      "success": true,
+      "final_size_bytes": 3342,
+      "final_usd": 0.0
+    },
+    {
+      "index": 1,
+      "file": "Assets/AppIcon/splash_anim_v2_bigbang_256_f01.png",
+      "prompt": "pixel art, 256x256, dark cosmic background #080d1f, top-down centered composition, no text, no UI, no logo, limited palette, crisp pixel edges, no anti-aliasing, single 2px pure white #ffffff pinpoint of light at exact center, faint 4px soft halo glow, background stars unchanged from f00, sense of awakening singularity",
+      "attempts": [
+        {
+          "attempt": 1,
+          "ok": true,
+          "elapsed_s": 19.77,
+          "usage": {
+            "type": "usd",
+            "usd": 0.0
+          },
+          "size_bytes": 10560
+        }
+      ],
+      "success": true,
+      "final_size_bytes": 10560,
+      "final_usd": 0.0
+    },
+    {
+      "index": 2,
+      "file": "Assets/AppIcon/splash_anim_v2_bigbang_256_f02.png",
+      "prompt": "pixel art, 256x256, dark cosmic background #080d1f, top-down centered composition, no text, no UI, no logo, limited palette, crisp pixel edges, no anti-aliasing, swollen 8px bright white core at center with pale yellow #fff4c2 inner ring, surrounding stars stretched into thin radial streaks pulled toward center, accretion-pull tension, pre-explosion build-up",
+      "attempts": [
+        {
+          "attempt": 1,
+          "ok": true,
+          "elapsed_s": 20.9,
+          "usage": {
+            "type": "usd",
+            "usd": 0.0
+          },
+          "size_bytes": 19115
+        }
+      ],
+      "success": true,
+      "final_size_bytes": 19115,
+      "final_usd": 0.0
+    },
+    {
+      "index": 3,
+      "file": "Assets/AppIcon/splash_anim_v2_bigbang_256_f03.png",
+      "prompt": "pixel art, 256x256, dark cosmic background #080d1f, top-down centered composition, no text, no UI, no logo, limited palette, crisp pixel edges, no anti-aliasing, supernova flash, intense 60px solid white #ffffff core, surrounding 96px concentric ring in saturated yellow #ffd755, hard pixel edges, first burst of light, stars washed out by overexposure",
+      "attempts": [
+        {
+          "attempt": 1,
+          "ok": true,
+          "elapsed_s": 43.26,
+          "usage": {
+            "type": "usd",
+            "usd": 0.0
+          },
+          "size_bytes": 21999
+        }
+      ],
+      "success": true,
+      "final_size_bytes": 21999,
+      "final_usd": 0.0
+    },
+    {
+      "index": 4,
+      "file": "Assets/AppIcon/splash_anim_v2_bigbang_256_f04.png",
+      "prompt": "pixel art, 256x256, dark cosmic background #080d1f, top-down centered composition, no text, no UI, no logo, limited palette, crisp pixel edges, no anti-aliasing, expanding shockwave ring at 200px diameter, gradient from inner orange #ff8a3a to outer deep red #c0341a, white core dimmed to 80px, ring edge crisp pixel-by-pixel, debris particles starting to detach from ring",
+      "attempts": [
+        {
+          "attempt": 1,
+          "ok": true,
+          "elapsed_s": 19.98,
+          "usage": {
+            "type": "usd",
+            "usd": 0.0
+          },
+          "size_bytes": 26059
+        }
+      ],
+      "success": true,
+      "final_size_bytes": 26059,
+      "final_usd": 0.0
+    },
+    {
+      "index": 5,
+      "file": "Assets/AppIcon/splash_anim_v2_bigbang_256_f05.png",
+      "prompt": "pixel art, 256x256, dark cosmic background #080d1f, top-down centered composition, no text, no UI, no logo, limited palette, crisp pixel edges, no anti-aliasing, full-screen faint red-orange afterglow at #5a2418 low alpha, central core faded to 40px dull amber #a86030, dozens of small debris pixel dots scattering outward in all directions, post-explosion stillness creeping in",
+      "attempts": [
+        {
+          "attempt": 1,
+          "ok": true,
+          "elapsed_s": 33.26,
+          "usage": {
+            "type": "usd",
+            "usd": 0.0
+          },
+          "size_bytes": 13200
+        }
+      ],
+      "success": true,
+      "final_size_bytes": 13200,
+      "final_usd": 0.0
+    },
+    {
+      "index": 6,
+      "file": "Assets/AppIcon/splash_anim_v2_bigbang_256_f06.png",
+      "prompt": "pixel art, 256x256, dark cosmic background #080d1f, top-down centered composition, no text, no UI, no logo, limited palette, crisp pixel edges, no anti-aliasing, 12 to 16 small irregular debris chunks in muted brown #5C4A3A and grey #4a4a52, scattered across the canvas at outer 60-80% radius, central area nearly empty with only faint embers, afterglow fading to background black, sense of cooling aftermath",
+      "attempts": [
+        {
+          "attempt": 1,
+          "ok": true,
+          "elapsed_s": 54.44,
+          "usage": {
+            "type": "usd",
+            "usd": 0.0
+          },
+          "size_bytes": 1260
+        }
+      ],
+      "success": true,
+      "final_size_bytes": 1260,
+      "final_usd": 0.0
+    },
+    {
+      "index": 7,
+      "file": "Assets/AppIcon/splash_anim_v2_bigbang_256_f07.png",
+      "prompt": "pixel art, 256x256, dark cosmic background #080d1f, top-down centered composition, no text, no UI, no logo, limited palette, crisp pixel edges, no anti-aliasing, same debris chunks as previous frame but now repositioned closer to center at 40-60% radius, faint circular gravitational halo glow at center in dim grey-brown #3a3028, subtle motion-trail hint behind each chunk pointing inward, accretion beginning",
+      "attempts": [
+        {
+          "attempt": 1,
+          "ok": true,
+          "elapsed_s": 31.36,
+          "usage": {
+            "type": "usd",
+            "usd": 0.0
+          },
+          "size_bytes": 8888
+        }
+      ],
+      "success": true,
+      "final_size_bytes": 8888,
+      "final_usd": 0.0
+    },
+    {
+      "index": 8,
+      "file": "Assets/AppIcon/splash_anim_v2_bigbang_256_f08.png",
+      "prompt": "pixel art, 256x256, dark cosmic background #080d1f, top-down centered composition, no text, no UI, no logo, limited palette, crisp pixel edges, no anti-aliasing, irregular 50px proto-mass at center forming from merged debris, rough lumpy silhouette in dark brown #4a3a2c with hot orange #d05030 magma cracks, a few remaining debris chunks still drifting inward at 30% radius, hot accretion glow rim",
+      "attempts": [
+        {
+          "attempt": 1,
+          "ok": true,
+          "elapsed_s": 28.75,
+          "usage": {
+            "type": "usd",
+            "usd": 0.0
+          },
+          "size_bytes": 9380
+        }
+      ],
+      "success": true,
+      "final_size_bytes": 9380,
+      "final_usd": 0.0
+    },
+    {
+      "index": 9,
+      "file": "Assets/AppIcon/splash_anim_v2_bigbang_256_f09.png",
+      "prompt": "pixel art, 256x256, dark cosmic background #080d1f, top-down centered composition, no text, no UI, no logo, limited palette, crisp pixel edges, no anti-aliasing, roughly spherical 100px primitive planetoid at center, surface still hot with bright magma cracks in orange-red #e05a28 across darker grey-brown crust #5C4A3A, faint outer heat haze, debris fully absorbed, planet not yet cooled",
+      "attempts": [
+        {
+          "attempt": 1,
+          "ok": true,
+          "elapsed_s": 32.53,
+          "usage": {
+            "type": "usd",
+            "usd": 0.0
+          },
+          "size_bytes": 25769
+        }
+      ],
+      "success": true,
+      "final_size_bytes": 25769,
+      "final_usd": 0.0
+    },
+    {
+      "index": 10,
+      "file": "Assets/AppIcon/splash_anim_v2_bigbang_256_f10.png",
+      "prompt": "pixel art, 256x256, dark cosmic background #080d1f, top-down centered composition, no text, no UI, no logo, limited palette, crisp pixel edges, no anti-aliasing, 140px primitive planet at center, magma cracks dimmed from orange to deep ember #7a2818, crust dominant in grey-brown #5C4A3A with dark crack veins #2E2520, cooling surface, first crater shadows appearing, heat haze gone, background stars returning at low alpha",
+      "attempts": [
+        {
+          "attempt": 1,
+          "ok": true,
+          "elapsed_s": 21.54,
+          "usage": {
+            "type": "usd",
+            "usd": 0.0
+          },
+          "size_bytes": 19128
+        }
+      ],
+      "success": true,
+      "final_size_bytes": 19128,
+      "final_usd": 0.0
+    },
+    {
+      "index": 11,
+      "file": "Assets/AppIcon/splash_anim_v2_bigbang_256_f11.png",
+      "prompt": "pixel art, 256x256, dark cosmic background #080d1f, top-down centered composition, no text, no UI, no logo, limited palette, crisp pixel edges, no anti-aliasing, final 160px primitive desolate planet at center, base grey-brown crust #5C4A3A with dark crack veins #2E2520, deep crater shadows #1A1410, no magma glow, no atmosphere, subtle stone highlight #A89888 on one side hinting at distant starlight, dead silent surface, 18 background stars fully restored at original alpha, completely static and held",
+      "attempts": [
+        {
+          "attempt": 1,
+          "ok": true,
+          "elapsed_s": 35.66,
+          "usage": {
+            "type": "usd",
+            "usd": 0.0
+          },
+          "size_bytes": 11280
+        }
+      ],
+      "success": true,
+      "final_size_bytes": 11280,
+      "final_usd": 0.0
+    }
+  ]
+}
