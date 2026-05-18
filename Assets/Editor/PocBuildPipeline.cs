@@ -53,9 +53,6 @@ public static class PocBuildPipeline
             cam.farClipPlane = 100f;
         }
 
-        var root = new GameObject("HelloRoot");
-        root.AddComponent<HelloWorld>();
-
         var map = new GameObject("MapRoot");
         map.AddComponent<MapView>();
 
