@@ -12,10 +12,14 @@ public static class PocBuildPipeline
     private const string SplashScenePath = "Assets/Scenes/SplashScene.unity";
     private const string PlanetIntroScenePath = "Assets/Scenes/PlanetIntroScene.unity";
 
-    // 행성 진화 8프레임 (황폐 → 푸른 지구)
-    // 해상도 256: PoC 단계 + 픽셀아트 톤 + iOS 업스케일 시 픽셀감 보존 + 메모리 효율 고려
-    private const string FramePathPrefix = "Assets/AppIcon/splash_anim_v1_planet_evolve_256_f";
-    private const int FrameCount = 8;
+    // 스플래시 v2: 빅뱅 12프레임 (무 → 폭발 → 응집 → 황폐 행성)
+    // 사양: docs/splash_v2_bigbang.md
+    // 해상도 256: PoC + 픽셀아트 톤 + iOS 업스케일 시 픽셀감 보존 + 메모리 효율 고려.
+    private const string FramePathPrefix = "Assets/AppIcon/splash_anim_v2_bigbang_256_f";
+    private const int FrameCount = 12;
+
+    // 스플래시 BGM (v1, 8초). loop=false 단발 재생.
+    private const string SplashBgmPath = "Assets/Audio/splash_bgm_v1.wav";
 
     // 행성 카드 (시나리오 v2 §2 / §8)
     private static readonly string[] PlanetCardPaths = new[]
@@ -82,7 +86,7 @@ public static class PocBuildPipeline
         var splashRoot = new GameObject("SplashRoot");
         var splash = splashRoot.AddComponent<SplashScreen>();
 
-        // 8프레임 로드
+        // v2 빅뱅 12프레임 로드
         var frames = new List<Texture2D>(FrameCount);
         int missing = 0;
         for (int i = 0; i < FrameCount; i++)
@@ -105,6 +109,20 @@ public static class PocBuildPipeline
         // 시나리오 v2: Splash → PlanetIntroScene
         splash.nextScene = "PlanetIntroScene";
         Debug.Log($"[POC] Splash frames loaded: {frames.Count}/{FrameCount} (missing={missing}) nextScene={splash.nextScene}");
+
+        // BGM 주입 (null 안전 — 자산 누락 시 무음으로 진행).
+        // AudioClip 으로 로드해 직렬화 — 런타임에선 AssetDatabase 비활성.
+        AssetDatabase.ImportAsset(SplashBgmPath, ImportAssetOptions.ForceUpdate);
+        var bgm = AssetDatabase.LoadAssetAtPath<AudioClip>(SplashBgmPath);
+        if (bgm != null)
+        {
+            splash.bgm = bgm;
+            Debug.Log("[POC] Splash BGM loaded: " + SplashBgmPath);
+        }
+        else
+        {
+            Debug.LogWarning("[POC] Splash BGM missing: " + SplashBgmPath);
+        }
 
         EditorSceneManager.SaveScene(scene, SplashScenePath);
 
