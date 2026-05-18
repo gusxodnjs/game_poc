@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -137,6 +138,18 @@ public class SplashScreen : MonoBehaviour
     private static readonly Color BgPulse = new Color32(0x1f, 0x0d, 0x08, 0xff);
 
     // ─────────────────────────────────────────────────────────────
+    // Native interop (iOS)
+    // ─────────────────────────────────────────────────────────────
+
+    // Assets/Plugins/iOS/IOSAudioSession.mm 의 entry point.
+    // AVAudioSession 카테고리를 Playback 으로 변경 — 디바이스 무음 스위치 ON
+    // 상태에서도 BGM 이 재생되도록 보장.
+#if UNITY_IOS && !UNITY_EDITOR
+    [DllImport("__Internal")]
+    private static extern void _ConfigurePlaybackAudioSession();
+#endif
+
+    // ─────────────────────────────────────────────────────────────
     // Unity lifecycle
     // ─────────────────────────────────────────────────────────────
 
@@ -168,6 +181,19 @@ public class SplashScreen : MonoBehaviour
                 size = Random.Range(2f, 4f),
             };
         }
+
+        // iOS AVAudioSession 을 Playback 으로 강제 — 디바이스 무음 스위치 우회.
+        // BGM 생성 직전에 1회 호출. Editor / 비 iOS 환경에서는 컴파일 제외.
+#if UNITY_IOS && !UNITY_EDITOR
+        try
+        {
+            _ConfigurePlaybackAudioSession();
+        }
+        catch (System.Exception e)
+        {
+            Debug.LogWarning("[POC] _ConfigurePlaybackAudioSession failed: " + e.Message);
+        }
+#endif
 
         // BGM (null 안전 — 자산 누락 시 무음 진행)
         if (bgm != null)

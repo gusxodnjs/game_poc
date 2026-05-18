@@ -316,8 +316,15 @@ public static class PocBuildPipeline
         PlayerSettings.SetScriptingBackend(NamedBuildTarget.iOS, ScriptingImplementation.IL2CPP);
         PlayerSettings.SplashScreen.show = false;
         PlayerSettings.SplashScreen.showUnityLogo = false;
+
+        // AVAudioSession 카테고리를 native plugin (Assets/Plugins/iOS/IOSAudioSession.mm)
+        // 에서 직접 Playback 으로 설정하므로, Unity 가 다른 앱 오디오를 자동으로
+        // 죽이지 않도록 false. 사용자가 음악 앱을 재생 중이어도 게임 BGM 이
+        // 그 위에 깔린다 (MixWithOthers). 무음 스위치 ON 우회는 native plugin 담당.
+        PlayerSettings.muteOtherAudioSources = false;
+
         AssetDatabase.SaveAssets();
-        Debug.Log("[POC] iOS Player Settings configured (bundle=" + BundleId + ")");
+        Debug.Log("[POC] iOS Player Settings configured (bundle=" + BundleId + ", muteOtherAudioSources=false)");
     }
 
     [MenuItem("TERRA PoC/3. Build iOS Xcode Project")]
