@@ -98,6 +98,12 @@ public class SplashScreen : MonoBehaviour
     public bool enableBgPulse = true;
     [Tooltip("폭발 구간 별 알파를 0.2 로 낮춤.")]
     public bool enableStarDim = true;
+    [Tooltip("프레임 간 크로스페이드 (마지막 180ms).")]
+    public bool enableCrossFade = true;
+    [Tooltip("응집 단계 행성 스케일 ease (파편 → 행성).")]
+    public bool enableCoalesceScale = true;
+    [Tooltip("응집 단계 미세 부유 (1.5px).")]
+    public bool enableCoalesceFloat = true;
 
     // ─────────────────────────────────────────────────────────────
     // 내부 상태
@@ -302,6 +308,83 @@ public class SplashScreen : MonoBehaviour
         return FrameDurationsMs.Length - 1; // hold 마지막 프레임
     }
 
+    /// <summary>프레임 간 크로스페이드 윈도우 (ms). 각 프레임의 마지막 구간만 활성.</summary>
+    private const float CrossFadeMs = 180f;
+
+    /// <summary>
+    /// 현재 시점의 (curIdx, nextIdx, fadeT) 반환.
+    /// fadeT 는 다음 프레임으로의 cross-fade 비율 (0=현재 100%, 1=다음 100%).
+    /// 각 프레임의 마지막 CrossFadeMs 동안만 cross-fade 활성, 그 외는 fadeT=0.
+    /// 마지막 프레임(f11)은 hold — nextIdx=curIdx, fadeT=0.
+    /// enableCrossFade=false 이면 항상 fadeT=0 으로 폴백.
+    /// </summary>
+    private (int curIdx, int nextIdx, float fadeT) ComputeFrameBlend(float elapsedMs)
+    {
+        if (elapsedMs < 0f) return (0, 0, 0f);
+        int acc = 0;
+        for (int i = 0; i < FrameDurationsMs.Length; i++)
+        {
+            int dur = FrameDurationsMs[i];
+            int end = acc + dur;
+            if (elapsedMs < end)
+            {
+                // 현재 프레임 i 내부 위치 ms (0 ~ dur)
+                float inFrame = elapsedMs - acc;
+                bool isLast = i == FrameDurationsMs.Length - 1;
+                if (isLast) return (i, i, 0f);
+                if (!enableCrossFade) return (i, i + 1, 0f);
+                float fadeStart = dur - CrossFadeMs;
+                if (inFrame < fadeStart) return (i, i + 1, 0f);
+                float t = Mathf.Clamp01((inFrame - fadeStart) / CrossFadeMs);
+                return (i, i + 1, t);
+            }
+            acc = end;
+        }
+        int last = FrameDurationsMs.Length - 1;
+        return (last, last, 0f);
+    }
+
+    /// <summary>
+    /// 응집 단계 행성 스케일 (1.0 = 100%, 기본 크기).
+    /// - 0~1900ms (폭발 전~잔광): 1.0 (변화 없음)
+    /// - 1900~2200ms (잔광): 1.0 → 0.4 빠르게 축소 (빅뱅 후 파편이 작아 보이게)
+    /// - 2200~5800ms (응집): 0.4 → 1.0 SmoothStep ease (점진 성장)
+    /// - 5800ms+: 1.0 (최종 행성)
+    /// enableCoalesceScale=false 이면 항상 1.0 반환.
+    /// </summary>
+    private float ComputePlanetScale(float ms)
+    {
+        if (!enableCoalesceScale) return 1.0f;
+        if (ms < 1900f) return 1.0f;
+        if (ms < 2200f)
+        {
+            float t = (ms - 1900f) / 300f;
+            return Mathf.Lerp(1.0f, 0.4f, t);
+        }
+        if (ms < 5800f)
+        {
+            float t = Mathf.SmoothStep(0f, 1f, (ms - 2200f) / 3600f);
+            return Mathf.Lerp(0.4f, 1.0f, t);
+        }
+        return 1.0f;
+    }
+
+    /// <summary>
+    /// 응집 단계 (2200~5000ms) 행성 위치 미세 부유 (±1.5px).
+    /// sin/cos 위상차로 부드러운 8자 곡선 — 셰이크와 달리 산만하지 않음.
+    /// enableCoalesceFloat=false 이면 Vector2.zero.
+    /// </summary>
+    private Vector2 CoalesceFloat(float ms)
+    {
+        if (!enableCoalesceFloat) return Vector2.zero;
+        if (ms < 2200f || ms > 5000f) return Vector2.zero;
+        float t = (ms - 2200f) / 1000f;
+        return new Vector2(
+            Mathf.Sin(t * Mathf.PI * 0.7f) * 1.5f,
+            Mathf.Cos(t * Mathf.PI * 0.5f) * 1.5f
+        );
+    }
+
     private float TitleAlpha()
     {
         if (_sequenceDoneTime < 0f) return 0f;
@@ -415,28 +498,43 @@ public class SplashScreen : MonoBehaviour
         DrawSparkles(globalAlpha, starAlphaScale);
 
         // 행성 애니메이션 (safe area 중앙) — 단발, loop 금지
+        // v3: 프레임 간 cross-fade + 응집 단계 스케일 ease + 미세 부유
         if (frames != null && frames.Length > 0)
         {
-            int frameIdx = ComputeFrameIndex(_elapsedMs);
-            if (frameIdx < 0) frameIdx = 0;
-            if (frameIdx >= frames.Length) frameIdx = frames.Length - 1;
+            var (curIdx, nextIdx, fadeT) = ComputeFrameBlend(_elapsedMs);
+            curIdx = Mathf.Clamp(curIdx, 0, frames.Length - 1);
+            nextIdx = Mathf.Clamp(nextIdx, 0, frames.Length - 1);
 
-            Texture2D tex = frames[frameIdx];
-            if (tex != null)
+            Texture2D curTex = frames[curIdx];
+            Texture2D nextTex = frames[nextIdx];
+
+            if (curTex != null)
             {
-                // 행성 크기: safe area 짧은 변의 60%
+                // 행성 크기: safe area 짧은 변의 60% × 응집 단계 ease
                 float planetSide = Mathf.Min(safeW, safeH) * 0.6f;
+                planetSide *= ComputePlanetScale(_elapsedMs);
                 float planetX = safeX + (safeW - planetSide) * 0.5f;
                 // 화면 세로 중앙보다 약간 위 (텍스트 영역 확보)
                 float planetY = safeY + (safeH - planetSide) * 0.5f - safeH * 0.05f;
 
-                // 폭발 구간 셰이크 오프셋
+                // 폭발 구간 셰이크 + 응집 구간 미세 부유 (중첩 의도)
                 Vector2 shake = ShakeOffset();
-                planetX += shake.x;
-                planetY += shake.y;
+                Vector2 floatOff = CoalesceFloat(_elapsedMs);
+                planetX += shake.x + floatOff.x;
+                planetY += shake.y + floatOff.y;
 
-                GUI.color = new Color(1f, 1f, 1f, globalAlpha);
-                GUI.DrawTexture(new Rect(planetX, planetY, planetSide, planetSide), tex, ScaleMode.ScaleToFit);
+                Rect planetRect = new Rect(planetX, planetY, planetSide, planetSide);
+
+                // 현재 프레임 (1 - fadeT)
+                GUI.color = new Color(1f, 1f, 1f, (1f - fadeT) * globalAlpha);
+                GUI.DrawTexture(planetRect, curTex, ScaleMode.ScaleToFit);
+
+                // 다음 프레임 (fadeT) — 같은 Rect 에 cross-fade
+                if (fadeT > 0f && nextTex != null && nextIdx != curIdx)
+                {
+                    GUI.color = new Color(1f, 1f, 1f, fadeT * globalAlpha);
+                    GUI.DrawTexture(planetRect, nextTex, ScaleMode.ScaleToFit);
+                }
             }
         }
 
