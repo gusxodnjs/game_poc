@@ -1,1 +1,14 @@
-{}
+{
+  "phase1": {
+    "base_object_id": "04a54a30-9c16-450b-8466-a73efbf39431",
+    "base_object_id_review_source": "b1694af0-379e-4be1-9b0f-2af7ee2f1e94",
+    "base_object_id_attempt1_failed": "3c20a101-e1f0-434c-bc86-22b75b35c0d9",
+    "animation_id": [
+      "b966accf-e71a-490f-88aa-87b153ff8fa6",
+      "ee921c0e-4719-4f37-9526-a41d3ece0440"
+    ],
+    "animation_note": "256x256 max frame_count=8 per anim; queued 2x6 (returned 7 each), used 6+6 = 12 frames total. emerge=b966accf, brighten=ee921c0e",
+    "frame_url_pattern": "object_id/animations/<anim_id>/unknown/<i>.png",
+    "frames_failures": []
+  }
+}
