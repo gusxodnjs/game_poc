@@ -12,14 +12,15 @@ public static class PocBuildPipeline
     private const string SplashScenePath = "Assets/Scenes/SplashScene.unity";
     private const string PlanetIntroScenePath = "Assets/Scenes/PlanetIntroScene.unity";
 
-    // 스플래시 v2: 빅뱅 12프레임 (무 → 폭발 → 응집 → 황폐 행성)
-    // 사양: docs/splash_v2_bigbang.md
+    // 스플래시 v4: 고요 → 빅뱅 → 행성 형성 (10초, 30 PNG)
+    // 사양: docs/superpowers/specs/2026-05-21-splash-v4-design.md (§3.4 자산 경로)
     // 해상도 256: PoC + 픽셀아트 톤 + iOS 업스케일 시 픽셀감 보존 + 메모리 효율 고려.
-    private const string FramePathPrefix = "Assets/AppIcon/splash_anim_v2_bigbang_256_f";
-    private const int FrameCount = 12;
+    private const string SplashV4Dir = "Assets/AppIcon/splash_v4";
+    // phase 별 frame 수 (index 0..3 = phase 1..4)
+    private static readonly int[] SplashV4PhaseCounts = new[] { 12, 6, 8, 4 };
 
-    // 스플래시 BGM (v1, 8초). loop=false 단발 재생.
-    private const string SplashBgmPath = "Assets/Audio/splash_bgm_v1.wav";
+    // 스플래시 BGM (v2, 10초). loop=false 단발 재생.
+    private const string SplashBgmPath = "Assets/Audio/splash_bgm_v2.wav";
 
     // 행성 카드 (시나리오 v2 §2 / §8)
     private static readonly string[] PlanetCardPaths = new[]
@@ -133,29 +134,45 @@ public static class PocBuildPipeline
         var splashRoot = new GameObject("SplashRoot");
         var splash = splashRoot.AddComponent<SplashScreen>();
 
-        // v2 빅뱅 12프레임 로드
-        var frames = new List<Texture2D>(FrameCount);
-        int missing = 0;
-        for (int i = 0; i < FrameCount; i++)
+        // v4 phase 별 frame 로드 (Assets/AppIcon/splash_v4/phase{p}_f{nn}.png)
+        // - phase 1..4 = 12+6+8+4 = 30 PNG
+        // - SplashScreen 의 phase{1..4}Frames 필드에 직접 주입.
+        var phaseArrays = new Texture2D[4][];
+        int totalLoaded = 0;
+        int totalMissing = 0;
+        for (int p = 0; p < SplashV4PhaseCounts.Length; p++)
         {
-            string framePath = $"{FramePathPrefix}{i:D2}.png";
-            AssetDatabase.ImportAsset(framePath, ImportAssetOptions.ForceUpdate);
-            var tex = AssetDatabase.LoadAssetAtPath<Texture2D>(framePath);
-            if (tex != null)
+            int count = SplashV4PhaseCounts[p];
+            var arr = new Texture2D[count];
+            int loaded = 0;
+            for (int f = 0; f < count; f++)
             {
-                frames.Add(tex);
+                string framePath = $"{SplashV4Dir}/phase{p + 1}_f{f:D2}.png";
+                AssetDatabase.ImportAsset(framePath, ImportAssetOptions.ForceUpdate);
+                var tex = AssetDatabase.LoadAssetAtPath<Texture2D>(framePath);
+                if (tex != null)
+                {
+                    arr[f] = tex;
+                    loaded++;
+                }
+                else
+                {
+                    Debug.LogWarning("[POC] Splash v4 frame missing: " + framePath);
+                    totalMissing++;
+                }
             }
-            else
-            {
-                Debug.LogWarning("[POC] Splash frame missing: " + framePath);
-                missing++;
-            }
+            phaseArrays[p] = arr;
+            totalLoaded += loaded;
+            Debug.Log($"[POC] Splash v4 phase{p + 1}: {loaded}/{count} frames loaded");
         }
 
-        splash.frames = frames.ToArray();
+        splash.phase1Frames = phaseArrays[0];
+        splash.phase2Frames = phaseArrays[1];
+        splash.phase3Frames = phaseArrays[2];
+        splash.phase4Frames = phaseArrays[3];
         // 시나리오 v2: Splash → PlanetIntroScene
         splash.nextScene = "PlanetIntroScene";
-        Debug.Log($"[POC] Splash frames loaded: {frames.Count}/{FrameCount} (missing={missing}) nextScene={splash.nextScene}");
+        Debug.Log($"[POC] Splash v4 frames total: {totalLoaded}/30 (missing={totalMissing}) nextScene={splash.nextScene}");
 
         // BGM 주입 (null 안전 — 자산 누락 시 무음으로 진행).
         // AudioClip 으로 로드해 직렬화 — 런타임에선 AssetDatabase 비활성.
