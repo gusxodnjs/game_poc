@@ -7,8 +7,10 @@ using UnityEngine.SceneManagement;
 /// 무 → 폭발 → 파편 응집 → 황폐한 원시 행성 의 단발 12프레임 시퀀스를 보여주고,
 /// 시퀀스 종료 후 타이틀/서브카피/버튼이 순차 페이드인된다.
 ///
-/// 사양 출처(SSOT): docs/splash_v2_bigbang.md
-/// 의존: PR #34 (docs), PR #35 (12프레임 자산), PR #36 (BGM)
+/// 사양 출처(SSOT):
+///   - 시퀀스 / 카피 / 타이밍: docs/splash_v2_bigbang.md
+///   - 시각 합성 v3 통합 (라디얼 그라데이션 / 히트 헤이즈 / 행성 75%): docs/superpowers/specs/2026-05-21-splash-merge-design.md
+/// 의존: PR #34 (docs), PR #35 (12프레임 자산), PR #36 (BGM), PR #46 (v3 alpha 12프레임)
 ///
 /// 핵심 변경 (v1 → v2):
 /// - 12프레임 가변 타이밍 (총 6,500ms, 폭발 구간만 빠르고 응집은 묵직)
@@ -85,7 +87,8 @@ public class SplashScreen : MonoBehaviour
     public float fadeOutDuration = 0.5f;
 
     [Header("배경 별 효과")]
-    public int sparkleCount = 18;
+    // v3 통합 디자인 §4.6: 18 → 24, PNG 안 baked 별이 사라졌으므로 화면 별 밀도 보강.
+    public int sparkleCount = 24;
 
     [Header("BGM 볼륨")]
     [Range(0f, 1f)]
@@ -139,9 +142,19 @@ public class SplashScreen : MonoBehaviour
     }
     private Sparkle[] _sparkles;
 
-    // 배경색 베이스 (펄스 / 복원 기준)
-    private static readonly Color BgBase  = new Color32(0x08, 0x0d, 0x1f, 0xff);
-    private static readonly Color BgPulse = new Color32(0x1f, 0x0d, 0x08, 0xff);
+    // v3 통합 디자인: 라디얼 그라데이션 배경 색상 (docs/superpowers/specs/2026-05-21-splash-merge-design.md §2.1, §4.1)
+    // - 카메라 ClearFlags 는 외곽 fallback 색 BgOuter 로만 clear.
+    // - L1 OnGUI 에서 두 장의 라디얼 그라데이션 텍스처(베이스/펄스) 를 cross-fade.
+    private static readonly Color BgCenterBase  = new Color32(0x1a, 0x12, 0x28, 0xff); // 살짝 따뜻한 보라/적흑
+    private static readonly Color BgCenterPulse = new Color32(0x5a, 0x24, 0x18, 0xff); // 폭발 펄스 적등색
+    private static readonly Color BgOuter       = new Color32(0x04, 0x06, 0x16, 0xff); // deep cosmic 외곽 fallback
+
+    // v3: OnGUI 에서 1회 생성하는 동적 텍스처 핸들.
+    // ★ 검은 화면 회귀 방지(커밋 19c08ee): 텍스처 생성은 Start() 가 아닌 첫 OnGUI() 에서 (EnsureTextures).
+    private bool _texturesReady;
+    private Texture2D _bgGradientBase;
+    private Texture2D _bgGradientPulse;
+    private Texture2D _heatHaze;
 
     // ─────────────────────────────────────────────────────────────
     // Native interop (iOS)
@@ -167,8 +180,10 @@ public class SplashScreen : MonoBehaviour
         var cam = Camera.main;
         if (cam != null)
         {
+            // v3 §4.7: 카메라 ClearFlags 는 외곽 fallback 색만 클리어.
+            // 펄스 / 그라데이션은 OnGUI L1 단에서 라디얼 텍스처가 풀스크린 덮음.
             cam.clearFlags = CameraClearFlags.SolidColor;
-            cam.backgroundColor = BgBase;
+            cam.backgroundColor = BgOuter;
         }
 
         _startTime = Time.time;
@@ -184,7 +199,8 @@ public class SplashScreen : MonoBehaviour
                 y = Random.value,
                 phase = Random.value,
                 speed = Random.Range(0.25f, 0.6f),
-                size = Random.Range(2f, 4f),
+                // v3 §4.6: 사이즈 범위 2~4 → 2~5 로 확장 (다양화).
+                size = Random.Range(2f, 5f),
             };
         }
 
@@ -262,25 +278,9 @@ public class SplashScreen : MonoBehaviour
         }
     }
 
-    /// <summary>배경색 펄스. LateUpdate 에서 카메라에 직접 반영 (OnGUI 와 분리).</summary>
-    private void LateUpdate()
-    {
-        if (!enableBgPulse) return;
-        var cam = Camera.main;
-        if (cam == null) return;
-
-        float ms = _elapsedMs;
-        if (ms < ExplosionStartMs || ms > ExplosionEndMs)
-        {
-            cam.backgroundColor = BgBase;
-        }
-        else
-        {
-            float t = (ms - ExplosionStartMs) / (ExplosionEndMs - ExplosionStartMs); // 0~1
-            float pulse = Mathf.Sin(t * Mathf.PI); // 0 → 1 → 0
-            cam.backgroundColor = Color.Lerp(BgBase, BgPulse, pulse);
-        }
-    }
+    // v3 §4.9: 기존 LateUpdate 의 카메라 배경 펄스는 제거.
+    // 펄스는 이제 OnGUI L1 단의 라디얼 그라데이션 cross-fade (DrawBackgroundGradient) 로만 처리.
+    // 카메라 배경은 정적 BgOuter 유지.
 
     // ─────────────────────────────────────────────────────────────
     // 시퀀스 / 페이드 계산
@@ -472,6 +472,8 @@ public class SplashScreen : MonoBehaviour
     private void OnGUI()
     {
         EnsureStyles();
+        // v3 §6.2: 동적 텍스처는 첫 OnGUI() 에서 1회 생성 (Start() 금지 — SRGB/format 회귀 방지).
+        EnsureTextures();
 
         // Safe area 계산 (Screen.safeArea 는 픽셀 좌표, y 는 아래에서 위로)
         // OnGUI 의 y 는 위에서 아래로이므로 변환 필요.
@@ -489,7 +491,19 @@ public class SplashScreen : MonoBehaviour
             globalAlpha = Mathf.Clamp01(1f - ft / fadeOutDuration);
         }
 
-        // 배경 별 — 폭발 구간에는 알파 다운 (0.2 배), 그 외 1.0 배
+        // ──────────────────────────────────────────────────────────
+        // v3 통합 디자인 레이어 순서 (§2.1, §4.2):
+        //   [L1] 라디얼 그라데이션 배경 (풀스크린, 폭발 펄스 cross-fade)
+        //   [L2] 절차적 별 24개 (한 벌만 — PNG 안 baked 별 제거됨)
+        //   [L4] 히트 헤이즈 (행성 중심) — L3 보다 먼저 그려야 행성 본체가 위에 올라옴
+        //   [L3] 행성 프레임 (75%, alpha PNG)
+        //   [L5] 타이틀 / 서브카피 / 버튼 / 버전
+        // ──────────────────────────────────────────────────────────
+
+        // [L1] 라디얼 그라데이션 배경
+        DrawBackgroundGradient(globalAlpha);
+
+        // [L2] 별 — 폭발 구간에는 알파 다운 (0.2 배), 그 외 1.0 배
         float starAlphaScale = 1.0f;
         if (enableStarDim && _elapsedMs >= ExplosionStartMs && _elapsedMs <= ExplosionEndMs)
         {
@@ -497,8 +511,20 @@ public class SplashScreen : MonoBehaviour
         }
         DrawSparkles(globalAlpha, starAlphaScale);
 
-        // 행성 애니메이션 (safe area 중앙) — 단발, loop 금지
-        // v3: 프레임 간 cross-fade + 응집 단계 스케일 ease + 미세 부유
+        // 행성 Rect 사전 계산 — L4 히트 헤이즈와 L3 행성이 같은 기준 Rect 공유.
+        // 헤이즈는 셰이크/부유 오프셋을 따라가지 않음 (배경과 행성 사이 정적 광학 다리).
+        // v3 §4.8: 행성 박스 60% → 75%. y 오프셋(-safeH*0.05f) 은 그대로 유지.
+        float planetSide = Mathf.Min(safeW, safeH) * 0.75f;
+        planetSide *= ComputePlanetScale(_elapsedMs);
+        float planetBaseX = safeX + (safeW - planetSide) * 0.5f;
+        float planetBaseY = safeY + (safeH - planetSide) * 0.5f - safeH * 0.05f;
+        Rect planetBaseRect = new Rect(planetBaseX, planetBaseY, planetSide, planetSide);
+
+        // [L4] 히트 헤이즈 (행성 PNG 아래) — L3 보다 먼저 그림.
+        DrawHeatHaze(globalAlpha, planetBaseRect);
+
+        // [L3] 행성 애니메이션 (safe area 중앙) — 단발, loop 금지
+        // 프레임 간 cross-fade + 응집 단계 스케일 ease + 미세 부유 + 폭발 셰이크
         if (frames != null && frames.Length > 0)
         {
             var (curIdx, nextIdx, fadeT) = ComputeFrameBlend(_elapsedMs);
@@ -510,20 +536,15 @@ public class SplashScreen : MonoBehaviour
 
             if (curTex != null)
             {
-                // 행성 크기: safe area 짧은 변의 60% × 응집 단계 ease
-                float planetSide = Mathf.Min(safeW, safeH) * 0.6f;
-                planetSide *= ComputePlanetScale(_elapsedMs);
-                float planetX = safeX + (safeW - planetSide) * 0.5f;
-                // 화면 세로 중앙보다 약간 위 (텍스트 영역 확보)
-                float planetY = safeY + (safeH - planetSide) * 0.5f - safeH * 0.05f;
-
-                // 폭발 구간 셰이크 + 응집 구간 미세 부유 (중첩 의도)
+                // 폭발 구간 셰이크 + 응집 구간 미세 부유 (중첩 의도) — 헤이즈는 따라가지 않음
                 Vector2 shake = ShakeOffset();
                 Vector2 floatOff = CoalesceFloat(_elapsedMs);
-                planetX += shake.x + floatOff.x;
-                planetY += shake.y + floatOff.y;
-
-                Rect planetRect = new Rect(planetX, planetY, planetSide, planetSide);
+                Rect planetRect = new Rect(
+                    planetBaseRect.x + shake.x + floatOff.x,
+                    planetBaseRect.y + shake.y + floatOff.y,
+                    planetBaseRect.width,
+                    planetBaseRect.height
+                );
 
                 // 현재 프레임 (1 - fadeT)
                 GUI.color = new Color(1f, 1f, 1f, (1f - fadeT) * globalAlpha);
@@ -632,5 +653,175 @@ public class SplashScreen : MonoBehaviour
             float py = s.y * Screen.height - s.size / 2f;
             GUI.DrawTexture(new Rect(px, py, s.size, s.size), Texture2D.whiteTexture);
         }
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // v3 통합 디자인 — L1 라디얼 그라데이션 배경 (§4.3)
+    // ─────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// 풀스크린 라디얼 그라데이션 배경. 베이스(중앙 #1a1228 → 외곽 #040616) 위에
+    /// 폭발 구간(1500~2200ms) 동안 펄스(중앙 #5a2418 → 외곽 #040616) 텍스처를
+    /// sin(t*π) cross-fade 로 덮는다.
+    /// </summary>
+    private void DrawBackgroundGradient(float globalAlpha)
+    {
+        if (_bgGradientBase == null) return;
+
+        // 폭발 펄스 비율 (0 → 1 → 0)
+        float pulseT = 0f;
+        if (enableBgPulse)
+        {
+            float ms = _elapsedMs;
+            if (ms >= ExplosionStartMs && ms <= ExplosionEndMs)
+            {
+                float t = (ms - ExplosionStartMs) / (ExplosionEndMs - ExplosionStartMs);
+                pulseT = Mathf.Sin(t * Mathf.PI);
+            }
+        }
+
+        Rect full = new Rect(0, 0, Screen.width, Screen.height);
+
+        // 베이스 그라데이션 (불투명)
+        GUI.color = new Color(1f, 1f, 1f, globalAlpha);
+        GUI.DrawTexture(full, _bgGradientBase, ScaleMode.StretchToFill);
+
+        // 펄스 그라데이션 cross-fade
+        if (pulseT > 0f && _bgGradientPulse != null)
+        {
+            GUI.color = new Color(1f, 1f, 1f, pulseT * globalAlpha);
+            GUI.DrawTexture(full, _bgGradientPulse, ScaleMode.StretchToFill);
+        }
+
+        GUI.color = Color.white;
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // v3 통합 디자인 — L4 히트 헤이즈 (§4.4)
+    // ─────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// 행성 중심 라디얼 alpha 그라데이션을 1.4× 크기로 그려 행성과 배경 사이를 광학적으로 연결.
+    /// 시간대별 alpha:
+    ///   - ~1500ms (폭발 전): 0 (헤이즈 없음)
+    ///   - 1500~2800ms (폭발~파편): 0.6
+    ///   - 2800~5800ms (응집): 0.4 → 0.15 lerp
+    ///   - 5800ms+ (hold): 0.15 정적
+    /// 헤이즈는 셰이크/부유를 따라가지 않음 — planetBaseRect 기준.
+    /// </summary>
+    private void DrawHeatHaze(float globalAlpha, Rect planetBaseRect)
+    {
+        if (_heatHaze == null) return;
+
+        float ms = _elapsedMs;
+        float hazeAlpha;
+        if (ms < ExplosionStartMs)
+        {
+            hazeAlpha = 0f;
+        }
+        else if (ms <= 2800f)
+        {
+            hazeAlpha = 0.6f;
+        }
+        else if (ms <= 5800f)
+        {
+            float t = (ms - 2800f) / 3000f;
+            hazeAlpha = Mathf.Lerp(0.4f, 0.15f, t);
+        }
+        else
+        {
+            hazeAlpha = 0.15f;
+        }
+
+        if (hazeAlpha <= 0f) return;
+
+        // 1.4× 크기로 행성 중심에 그림 (가장자리 너머로 번짐)
+        const float expand = 1.4f;
+        float hw = planetBaseRect.width * expand;
+        float hh = planetBaseRect.height * expand;
+        float hx = planetBaseRect.x - (hw - planetBaseRect.width) * 0.5f;
+        float hy = planetBaseRect.y - (hh - planetBaseRect.height) * 0.5f;
+        Rect hazeRect = new Rect(hx, hy, hw, hh);
+
+        // 따뜻한 황색 헤이즈 (#ffd9a6 = (1, 0.85, 0.65))
+        GUI.color = new Color(1f, 0.85f, 0.65f, hazeAlpha * globalAlpha);
+        GUI.DrawTexture(hazeRect, _heatHaze, ScaleMode.StretchToFill);
+        GUI.color = Color.white;
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // v3 통합 디자인 — 동적 텍스처 생성 (§4.5)
+    // ─────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// 라디얼 그라데이션 + 히트 헤이즈 텍스처를 첫 OnGUI() 에서 1회 생성.
+    /// ★ Start() 가 아닌 OnGUI() 에서 호출해야 함 — Start() 에서 동적 텍스처 생성 시
+    ///   커밋 19c08ee 의 SRGB/format 검은 화면 회귀가 발생함 (§6.2).
+    /// </summary>
+    private void EnsureTextures()
+    {
+        if (_texturesReady) return;
+        _bgGradientBase  = BuildRadialColorTexture(128, BgCenterBase,  BgOuter);
+        _bgGradientPulse = BuildRadialColorTexture(128, BgCenterPulse, BgOuter);
+        _heatHaze        = BuildRadialAlphaTexture(128, new Color(1f, 0.85f, 0.65f, 1f));
+        _texturesReady = true;
+    }
+
+    /// <summary>
+    /// 중앙 → 외곽으로 RGB 색이 lerp 되는 라디얼 그라데이션 텍스처 (alpha=1).
+    /// SmoothStep 으로 부드러운 fall-off. bilinear filter 로 풀스크린 stretch 시 자연스러움.
+    /// </summary>
+    private static Texture2D BuildRadialColorTexture(int size, Color center, Color outer)
+    {
+        var tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+        tex.filterMode = FilterMode.Bilinear;
+        tex.wrapMode = TextureWrapMode.Clamp;
+        var pixels = new Color[size * size];
+        float cx = (size - 1) * 0.5f;
+        float cy = (size - 1) * 0.5f;
+        float maxR = Mathf.Sqrt(cx * cx + cy * cy);
+        for (int y = 0; y < size; y++)
+        {
+            for (int x = 0; x < size; x++)
+            {
+                float dx = x - cx, dy = y - cy;
+                float r = Mathf.Sqrt(dx * dx + dy * dy);
+                float t = Mathf.Clamp01(r / maxR);
+                t = Mathf.SmoothStep(0f, 1f, t);
+                pixels[y * size + x] = Color.Lerp(center, outer, t);
+            }
+        }
+        tex.SetPixels(pixels);
+        tex.Apply();
+        return tex;
+    }
+
+    /// <summary>
+    /// 중앙 alpha=1 → 외곽 alpha=0 라디얼 그라데이션 텍스처. RGB 는 고정 (헤이즈 색).
+    /// 행성 위에 GUI.color 알파 변조로 덧대어 광학 다리 역할.
+    /// </summary>
+    private static Texture2D BuildRadialAlphaTexture(int size, Color rgb)
+    {
+        var tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+        tex.filterMode = FilterMode.Bilinear;
+        tex.wrapMode = TextureWrapMode.Clamp;
+        var pixels = new Color[size * size];
+        float cx = (size - 1) * 0.5f;
+        float cy = (size - 1) * 0.5f;
+        float maxR = Mathf.Sqrt(cx * cx + cy * cy);
+        for (int y = 0; y < size; y++)
+        {
+            for (int x = 0; x < size; x++)
+            {
+                float dx = x - cx, dy = y - cy;
+                float r = Mathf.Sqrt(dx * dx + dy * dy);
+                float t = Mathf.Clamp01(r / maxR);
+                float a = 1f - Mathf.SmoothStep(0f, 1f, t);
+                pixels[y * size + x] = new Color(rgb.r, rgb.g, rgb.b, a);
+            }
+        }
+        tex.SetPixels(pixels);
+        tex.Apply();
+        return tex;
     }
 }
