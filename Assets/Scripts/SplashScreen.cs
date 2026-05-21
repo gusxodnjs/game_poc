@@ -3,56 +3,55 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 
 /// <summary>
-/// 스플래시 화면 v2 — "빅뱅 시퀀스".
-/// 무 → 폭발 → 파편 응집 → 황폐한 원시 행성 의 단발 12프레임 시퀀스를 보여주고,
-/// 시퀀스 종료 후 타이틀/서브카피/버튼이 순차 페이드인된다.
+/// 스플래시 화면 v4 — "고요 → 빅뱅 → 행성 형성" (10초 / 30 frames).
 ///
 /// 사양 출처(SSOT):
-///   - 시퀀스 / 카피 / 타이밍: docs/splash_v2_bigbang.md
+///   - docs/superpowers/specs/2026-05-21-splash-v4-design.md (§2 시퀀스, §5 코드 변경)
 ///   - 시각 합성 v3 통합 (라디얼 그라데이션 / 히트 헤이즈 / 행성 75%): docs/superpowers/specs/2026-05-21-splash-merge-design.md
-/// 의존: PR #34 (docs), PR #35 (12프레임 자산), PR #36 (BGM), PR #46 (v3 alpha 12프레임)
+/// 의존: PR #49 (자산 — 30 PNG + BGM v2)
 ///
-/// 핵심 변경 (v1 → v2):
-/// - 12프레임 가변 타이밍 (총 6,500ms, 폭발 구간만 빠르고 응집은 묵직)
-/// - 단발 재생 (loop 금지), 끝 프레임 f11 무한 hold
-/// - 시퀀스 종료 후 타이틀/서브카피/버튼이 순차 페이드인 (8.3초 시점에 모두 등장)
-/// - BGM 재생 (AudioSource, loop=false, vol=0.6)
-/// - 스킵 입력: 시퀀스 진행 중 화면 1탭 → 즉시 끝 상태로 점프
-/// - (선택) 카메라 셰이크 / 배경색 펄스 / 별 알파 펄스 — 폭발 구간 임팩트
+/// 핵심 변경 (v3 → v4):
+/// - 단일 Frames[12] → phase 별 4개 배열 (12+6+8+4 = 30)
+/// - displayDuration 6.5s → 10.0s
+/// - 타이밍 상수: phase1 0~4000ms, phase2 4000~5500ms, phase3 5500~9000ms, phase4 9000~10000ms
+/// - phase 사이 200ms cross-fade (`CrossFadeMs`)
+/// - BGM v1 8s → v2 10s (`splash_bgm_v2.wav`)
+/// - v3 의 히트 헤이즈 / 별 / 라디얼 그라데이션 / 행성 75% / iOS 무음 우회 / 검은 화면 회귀 방지(`EnsureTextures`)
+///   는 모두 유지. 시각 합성 레이어만 새 phase 타이밍에 맞춰 boundary 갱신.
+/// - 효과음 (sfx) 추가 금지 — BGM 만 (spec §4.3)
 /// - IMGUI 전용 (Canvas / UI Toolkit 사용 금지)
 /// </summary>
 public class SplashScreen : MonoBehaviour
 {
     // ─────────────────────────────────────────────────────────────
-    // 시퀀스 타이밍 (docs/splash_v2_bigbang.md §2 표 그대로)
+    // 시퀀스 타이밍 (spec §2.1 표 + §5.2)
     // ─────────────────────────────────────────────────────────────
 
-    /// <summary>
-    /// 프레임별 표시 시간 (ms). 인덱스 = 프레임 번호.
-    /// 총 합 = 6,500ms. f11 은 nominal 700ms 지만 이후 무한 hold (loop 금지).
-    /// </summary>
-    private static readonly int[] FrameDurationsMs = new int[]
-    {
-        500,  // f00: 무 (어둠)            0    ~  500
-        700,  // f01: 작은 점               500  ~ 1200
-        300,  // f02: 임계 광원             1200 ~ 1500
-        200,  // f03: 폭발 1 (코어)        1500 ~ 1700
-        200,  // f04: 폭발 2 (확산)        1700 ~ 1900
-        300,  // f05: 폭발 3 (잔광)        1900 ~ 2200
-        600,  // f06: 파편 비산             2200 ~ 2800
-        600,  // f07: 응집 1                2800 ~ 3400
-        800,  // f08: 응집 2                3400 ~ 4200
-        800,  // f09: 응집 3                4200 ~ 5000
-        800,  // f10: 식어가는 행성        5000 ~ 5800
-        700,  // f11: 황폐 행성 (최종)     5800 ~ 6500 (이후 hold)
-    };
+    /// <summary>스플래시 표시 총 길이(초). spec §5.2.</summary>
+    public float displayDuration = 10.0f;
 
-    /// <summary>시퀀스 총 길이 (ms). FrameDurationsMs 합과 일치해야 한다.</summary>
-    private const int SequenceTotalMs = 6500;
+    // Phase 경계 (ms 단위, OnGUI/Update 와 비교) — spec §5.2
+    private const float Phase1EndMs   = 4000f;  // 고요 → 점광 끝
+    private const float Phase2StartMs = 4000f;  // 빅뱅 시작 (= 기존 ExplosionStartMs 의미 보존)
+    private const float Phase2EndMs   = 5500f;  // 빅뱅 끝     (= 기존 ExplosionEndMs 의미 보존)
+    private const float Phase3EndMs   = 9000f;  // 응집 끝
+    private const float Phase4EndMs   = 10000f; // hold 끝 (= displayDuration * 1000)
 
-    // 폭발 임팩트 구간 (셰이크 / 펄스 / 별 알파 다운)
-    private const float ExplosionStartMs = 1500f; // f03 시작
-    private const float ExplosionEndMs   = 2200f; // f05 끝
+    /// <summary>phase 사이 cross-fade 시간 (ms). spec §5.3.</summary>
+    private const float CrossFadeMs = 200f;
+
+    /// <summary>시퀀스 총 길이 (ms). Phase4EndMs 와 일치해야 한다.</summary>
+    private const int SequenceTotalMs = 10000;
+
+    // phase 별 길이 캐시 (per-frame 시간 계산용)
+    // phase1: 333ms × 12 = 3996ms (≈4000ms)
+    // phase2: 250ms × 6  = 1500ms
+    // phase3: 437ms × 8  = 3496ms (마지막 frame 으로 보정)
+    // phase4: 250ms × 4  = 1000ms
+    private const float Phase1LenMs = Phase1EndMs;                  // 4000
+    private const float Phase2LenMs = Phase2EndMs - Phase2StartMs;  // 1500
+    private const float Phase3LenMs = Phase3EndMs - Phase2EndMs;    // 3500
+    private const float Phase4LenMs = Phase4EndMs - Phase3EndMs;    // 1000
 
     // 카피 페이드인 시작 오프셋 (시퀀스 종료 = 0초 기준)
     private const float TitleFadeStartSec    = 0.0f;
@@ -66,10 +65,17 @@ public class SplashScreen : MonoBehaviour
     // 직렬화 필드 (PocBuildPipeline.SetupSplashScene 에서 주입)
     // ─────────────────────────────────────────────────────────────
 
-    [Header("애니메이션 프레임 (12장, f00 ~ f11)")]
-    public Texture2D[] frames;
+    [Header("애니메이션 프레임 — phase 별 배열 (spec §5.1)")]
+    [Tooltip("phase 1 (고요 → 점광) 12 frames")]
+    public Texture2D[] phase1Frames;
+    [Tooltip("phase 2 (빅뱅) 6 frames")]
+    public Texture2D[] phase2Frames;
+    [Tooltip("phase 3 (응집) 8 frames")]
+    public Texture2D[] phase3Frames;
+    [Tooltip("phase 4 (hold) 4 frames")]
+    public Texture2D[] phase4Frames;
 
-    [Header("BGM (단발 재생, loop=false)")]
+    [Header("BGM (단발 재생, loop=false) — splash_bgm_v2.wav (10s)")]
     public AudioClip bgm;
 
     [Header("표시 문구")]
@@ -87,26 +93,24 @@ public class SplashScreen : MonoBehaviour
     public float fadeOutDuration = 0.5f;
 
     [Header("배경 별 효과")]
-    // v3 통합 디자인 §4.6: 18 → 24, PNG 안 baked 별이 사라졌으므로 화면 별 밀도 보강.
+    // v3/v4 단일 우주 원칙 — 별 24개 유지 (spec §5.5).
     public int sparkleCount = 24;
 
     [Header("BGM 볼륨")]
     [Range(0f, 1f)]
     public float bgmVolume = 0.6f;
 
-    [Header("효과 옵션 (docs §5.2)")]
+    [Header("효과 옵션")]
     [Tooltip("폭발 구간 ±3px 카메라 셰이크 (행성 Rect 에만 적용).")]
     public bool enableShake = true;
-    [Tooltip("폭발 구간 배경색 펄스 (#080d1f → #1f0d08 → #080d1f).")]
+    [Tooltip("폭발 구간 배경색 펄스 (#1a1228 → #5a2418 → #1a1228).")]
     public bool enableBgPulse = true;
     [Tooltip("폭발 구간 별 알파를 0.2 로 낮춤.")]
     public bool enableStarDim = true;
-    [Tooltip("프레임 간 크로스페이드 (마지막 180ms).")]
+    [Tooltip("phase 사이 200ms 크로스페이드 (spec §5.3).")]
     public bool enableCrossFade = true;
-    [Tooltip("응집 단계 행성 스케일 ease (파편 → 행성).")]
-    public bool enableCoalesceScale = true;
-    [Tooltip("응집 단계 미세 부유 (1.5px).")]
-    public bool enableCoalesceFloat = true;
+    [Tooltip("hold 단계 행성 미세 호흡 (scale 1.0↔1.02).")]
+    public bool enableHoldBreath = true;
 
     // ─────────────────────────────────────────────────────────────
     // 내부 상태
@@ -120,7 +124,7 @@ public class SplashScreen : MonoBehaviour
 
     // 시퀀스 타이밍
     private float _startTime;
-    private float _elapsedMs; // Update 에서 캐시 (OnGUI / LateUpdate 공유)
+    private float _elapsedMs; // Update 에서 캐시 (OnGUI 공유)
     private float _sequenceDoneTime = -1f; // 시퀀스 종료 시점 Time.time (한 번만 기록)
 
     // 페이드아웃 상태 (버튼 탭 후)
@@ -143,8 +147,6 @@ public class SplashScreen : MonoBehaviour
     private Sparkle[] _sparkles;
 
     // v3 통합 디자인: 라디얼 그라데이션 배경 색상 (docs/superpowers/specs/2026-05-21-splash-merge-design.md §2.1, §4.1)
-    // - 카메라 ClearFlags 는 외곽 fallback 색 BgOuter 로만 clear.
-    // - L1 OnGUI 에서 두 장의 라디얼 그라데이션 텍스처(베이스/펄스) 를 cross-fade.
     private static readonly Color BgCenterBase  = new Color32(0x1a, 0x12, 0x28, 0xff); // 살짝 따뜻한 보라/적흑
     private static readonly Color BgCenterPulse = new Color32(0x5a, 0x24, 0x18, 0xff); // 폭발 펄스 적등색
     private static readonly Color BgOuter       = new Color32(0x04, 0x06, 0x16, 0xff); // deep cosmic 외곽 fallback
@@ -174,7 +176,16 @@ public class SplashScreen : MonoBehaviour
 
     private void Start()
     {
-        Debug.Log("[POC] SplashScreen v2.Start (frames=" + (frames != null ? frames.Length : 0)
+        int totalFrames =
+            (phase1Frames != null ? phase1Frames.Length : 0) +
+            (phase2Frames != null ? phase2Frames.Length : 0) +
+            (phase3Frames != null ? phase3Frames.Length : 0) +
+            (phase4Frames != null ? phase4Frames.Length : 0);
+        Debug.Log("[POC] SplashScreen v4.Start (frames=" + totalFrames
+                  + " p1=" + (phase1Frames != null ? phase1Frames.Length : 0)
+                  + " p2=" + (phase2Frames != null ? phase2Frames.Length : 0)
+                  + " p3=" + (phase3Frames != null ? phase3Frames.Length : 0)
+                  + " p4=" + (phase4Frames != null ? phase4Frames.Length : 0)
                   + ", bgm=" + (bgm != null ? bgm.name : "null") + ")");
 
         var cam = Camera.main;
@@ -199,7 +210,6 @@ public class SplashScreen : MonoBehaviour
                 y = Random.value,
                 phase = Random.value,
                 speed = Random.Range(0.25f, 0.6f),
-                // v3 §4.6: 사이즈 범위 2~4 → 2~5 로 확장 (다양화).
                 size = Random.Range(2f, 5f),
             };
         }
@@ -241,7 +251,7 @@ public class SplashScreen : MonoBehaviour
             {
                 // _startTime 을 과거로 끌어서 elapsed = SequenceTotalMs 가 되도록 한다.
                 _startTime = Time.time - (SequenceTotalMs / 1000f);
-                Debug.Log("[POC] SplashScreen v2: sequence skipped → jump to f11 hold");
+                Debug.Log("[POC] SplashScreen v4: sequence skipped → jump to phase4 hold");
             }
         }
 
@@ -252,7 +262,7 @@ public class SplashScreen : MonoBehaviour
         if (_sequenceDoneTime < 0f && SequenceDone())
         {
             _sequenceDoneTime = Time.time;
-            Debug.Log("[POC] SplashScreen v2: sequence done at t=" + _sequenceDoneTime
+            Debug.Log("[POC] SplashScreen v4: sequence done at t=" + _sequenceDoneTime
                       + ", title/subtitle/button fade-in starting");
         }
 
@@ -278,111 +288,153 @@ public class SplashScreen : MonoBehaviour
         }
     }
 
-    // v3 §4.9: 기존 LateUpdate 의 카메라 배경 펄스는 제거.
-    // 펄스는 이제 OnGUI L1 단의 라디얼 그라데이션 cross-fade (DrawBackgroundGradient) 로만 처리.
-    // 카메라 배경은 정적 BgOuter 유지.
+    // spec §5.6: LateUpdate 사용 금지. v3 에서 이미 제거됨.
 
     // ─────────────────────────────────────────────────────────────
     // 시퀀스 / 페이드 계산
     // ─────────────────────────────────────────────────────────────
 
-    /// <summary>시퀀스가 끝났는지 (=f11 hold 상태). 카피 페이드인 시작 조건.</summary>
+    /// <summary>시퀀스가 끝났는지 (=phase4 hold 끝). 카피 페이드인 시작 조건.</summary>
     private bool SequenceDone()
     {
         return _elapsedMs >= SequenceTotalMs;
     }
 
     /// <summary>
-    /// 경과 ms 로부터 현재 프레임 인덱스를 계산. 누적 duration 표 사용.
-    /// loop 금지 — 시퀀스 종료 후에는 항상 마지막 프레임 인덱스(11) 반환.
+    /// spec §5.3 — 경과 ms 로부터 (phase, frame, blend) 계산.
+    /// - phase: 1..4
+    /// - frame: 해당 phase 내부 0-based 인덱스
+    /// - blend: 다음 frame 으로의 cross-fade 비율 (0=현재 100%, 1=다음 100%).
+    ///   각 frame 의 마지막 CrossFadeMs(200ms) 동안만 blend > 0.
+    ///   phase 마지막 frame 의 끝 200ms 에서는 다음 phase 의 첫 frame 으로 cross-fade.
+    /// - 전체 시퀀스 마지막 (phase4 마지막 frame) 은 hold, blend=0.
     /// </summary>
-    private int ComputeFrameIndex(float elapsedMs)
+    private (int phase, int frame, float blend) FrameAt(float ms)
     {
-        if (elapsedMs < 0f) return 0;
-        int acc = 0;
-        for (int i = 0; i < FrameDurationsMs.Length; i++)
+        if (ms < 0f) ms = 0f;
+
+        // phase 식별
+        int phase;
+        float phaseStartMs;
+        float phaseLenMs;
+        Texture2D[] phaseArr;
+        if (ms < Phase1EndMs)
         {
-            acc += FrameDurationsMs[i];
-            if (elapsedMs < acc) return i;
+            phase = 1; phaseStartMs = 0f;            phaseLenMs = Phase1LenMs; phaseArr = phase1Frames;
         }
-        return FrameDurationsMs.Length - 1; // hold 마지막 프레임
+        else if (ms < Phase2EndMs)
+        {
+            phase = 2; phaseStartMs = Phase2StartMs; phaseLenMs = Phase2LenMs; phaseArr = phase2Frames;
+        }
+        else if (ms < Phase3EndMs)
+        {
+            phase = 3; phaseStartMs = Phase2EndMs;   phaseLenMs = Phase3LenMs; phaseArr = phase3Frames;
+        }
+        else
+        {
+            phase = 4; phaseStartMs = Phase3EndMs;   phaseLenMs = Phase4LenMs; phaseArr = phase4Frames;
+        }
+
+        int phaseFrameCount = phaseArr != null ? phaseArr.Length : 0;
+        if (phaseFrameCount <= 0)
+        {
+            return (phase, 0, 0f);
+        }
+
+        // phase 내부 위치
+        float inPhase = Mathf.Clamp(ms - phaseStartMs, 0f, phaseLenMs);
+        float perFrame = phaseLenMs / phaseFrameCount;
+        int frameIdx = Mathf.Clamp((int)(inPhase / perFrame), 0, phaseFrameCount - 1);
+
+        if (!enableCrossFade)
+        {
+            return (phase, frameIdx, 0f);
+        }
+
+        // 각 frame 의 마지막 CrossFadeMs 동안 다음 frame 으로 blend.
+        // phase4 마지막 frame 은 hold — blend=0.
+        float inFrame = inPhase - frameIdx * perFrame;
+        float fadeStart = perFrame - CrossFadeMs;
+        if (inFrame < fadeStart) return (phase, frameIdx, 0f);
+
+        bool isLastOfSeq = (phase == 4 && frameIdx == phaseFrameCount - 1);
+        if (isLastOfSeq) return (phase, frameIdx, 0f);
+
+        float blend = Mathf.Clamp01((inFrame - fadeStart) / CrossFadeMs);
+        return (phase, frameIdx, blend);
     }
 
-    /// <summary>프레임 간 크로스페이드 윈도우 (ms). 각 프레임의 마지막 구간만 활성.</summary>
-    private const float CrossFadeMs = 180f;
-
-    /// <summary>
-    /// 현재 시점의 (curIdx, nextIdx, fadeT) 반환.
-    /// fadeT 는 다음 프레임으로의 cross-fade 비율 (0=현재 100%, 1=다음 100%).
-    /// 각 프레임의 마지막 CrossFadeMs 동안만 cross-fade 활성, 그 외는 fadeT=0.
-    /// 마지막 프레임(f11)은 hold — nextIdx=curIdx, fadeT=0.
-    /// enableCrossFade=false 이면 항상 fadeT=0 으로 폴백.
-    /// </summary>
-    private (int curIdx, int nextIdx, float fadeT) ComputeFrameBlend(float elapsedMs)
+    /// <summary>(phase, frame) → 실제 Texture2D. 누락 시 null.</summary>
+    private Texture2D TextureAt(int phase, int frame)
     {
-        if (elapsedMs < 0f) return (0, 0, 0f);
-        int acc = 0;
-        for (int i = 0; i < FrameDurationsMs.Length; i++)
+        Texture2D[] arr = phase switch
         {
-            int dur = FrameDurationsMs[i];
-            int end = acc + dur;
-            if (elapsedMs < end)
-            {
-                // 현재 프레임 i 내부 위치 ms (0 ~ dur)
-                float inFrame = elapsedMs - acc;
-                bool isLast = i == FrameDurationsMs.Length - 1;
-                if (isLast) return (i, i, 0f);
-                if (!enableCrossFade) return (i, i + 1, 0f);
-                float fadeStart = dur - CrossFadeMs;
-                if (inFrame < fadeStart) return (i, i + 1, 0f);
-                float t = Mathf.Clamp01((inFrame - fadeStart) / CrossFadeMs);
-                return (i, i + 1, t);
-            }
-            acc = end;
-        }
-        int last = FrameDurationsMs.Length - 1;
-        return (last, last, 0f);
+            1 => phase1Frames,
+            2 => phase2Frames,
+            3 => phase3Frames,
+            4 => phase4Frames,
+            _ => null,
+        };
+        if (arr == null || arr.Length == 0) return null;
+        int idx = Mathf.Clamp(frame, 0, arr.Length - 1);
+        return arr[idx];
     }
 
     /// <summary>
-    /// 응집 단계 행성 스케일 (1.0 = 100%, 기본 크기).
-    /// - 0~1900ms (폭발 전~잔광): 1.0 (변화 없음)
-    /// - 1900~2200ms (잔광): 1.0 → 0.4 빠르게 축소 (빅뱅 후 파편이 작아 보이게)
-    /// - 2200~5800ms (응집): 0.4 → 1.0 SmoothStep ease (점진 성장)
-    /// - 5800ms+: 1.0 (최종 행성)
-    /// enableCoalesceScale=false 이면 항상 1.0 반환.
+    /// 현재 시점의 (curTex, nextTex, blend) 반환.
+    /// nextTex 는 같은 phase 내 다음 frame, 또는 phase 경계에서는 다음 phase 의 첫 frame.
+    /// hold 끝에서는 nextTex=curTex, blend=0.
     /// </summary>
-    private float ComputePlanetScale(float ms)
+    private (Texture2D cur, Texture2D next, float blend) ComputeBlend(float ms)
     {
-        if (!enableCoalesceScale) return 1.0f;
-        if (ms < 1900f) return 1.0f;
-        if (ms < 2200f)
+        var (phase, frame, blend) = FrameAt(ms);
+        var curTex = TextureAt(phase, frame);
+
+        if (blend <= 0f || curTex == null)
         {
-            float t = (ms - 1900f) / 300f;
-            return Mathf.Lerp(1.0f, 0.4f, t);
+            return (curTex, curTex, 0f);
         }
-        if (ms < 5800f)
+
+        // 다음 frame: 같은 phase 내 frame+1 또는 다음 phase 의 frame 0
+        int curPhaseLen = phase switch
         {
-            float t = Mathf.SmoothStep(0f, 1f, (ms - 2200f) / 3600f);
-            return Mathf.Lerp(0.4f, 1.0f, t);
+            1 => phase1Frames != null ? phase1Frames.Length : 0,
+            2 => phase2Frames != null ? phase2Frames.Length : 0,
+            3 => phase3Frames != null ? phase3Frames.Length : 0,
+            4 => phase4Frames != null ? phase4Frames.Length : 0,
+            _ => 0,
+        };
+
+        Texture2D nextTex;
+        if (frame + 1 < curPhaseLen)
+        {
+            nextTex = TextureAt(phase, frame + 1);
         }
-        return 1.0f;
+        else if (phase < 4)
+        {
+            nextTex = TextureAt(phase + 1, 0);
+        }
+        else
+        {
+            // phase4 마지막 frame — hold (FrameAt 에서 blend=0 이므로 도달 불가)
+            return (curTex, curTex, 0f);
+        }
+
+        if (nextTex == null) return (curTex, curTex, 0f);
+        return (curTex, nextTex, blend);
     }
 
     /// <summary>
-    /// 응집 단계 (2200~5000ms) 행성 위치 미세 부유 (±1.5px).
-    /// sin/cos 위상차로 부드러운 8자 곡선 — 셰이크와 달리 산만하지 않음.
-    /// enableCoalesceFloat=false 이면 Vector2.zero.
+    /// hold 단계 (phase 4) 행성 미세 호흡 — scale 1.0 ↔ 1.02.
+    /// enableHoldBreath=false 이면 1.0 반환.
     /// </summary>
-    private Vector2 CoalesceFloat(float ms)
+    private float ComputeHoldBreath(float ms)
     {
-        if (!enableCoalesceFloat) return Vector2.zero;
-        if (ms < 2200f || ms > 5000f) return Vector2.zero;
-        float t = (ms - 2200f) / 1000f;
-        return new Vector2(
-            Mathf.Sin(t * Mathf.PI * 0.7f) * 1.5f,
-            Mathf.Cos(t * Mathf.PI * 0.5f) * 1.5f
-        );
+        if (!enableHoldBreath) return 1.0f;
+        if (ms < Phase3EndMs) return 1.0f;
+        float t = Mathf.Clamp01((ms - Phase3EndMs) / Phase4LenMs); // 0~1
+        // 1.0 → 1.02 → 1.0 매끈한 sin 펄스 (1 cycle)
+        return 1.0f + 0.02f * Mathf.Sin(t * Mathf.PI);
     }
 
     private float TitleAlpha()
@@ -411,7 +463,7 @@ public class SplashScreen : MonoBehaviour
     {
         if (!enableShake) return Vector2.zero;
         float ms = _elapsedMs;
-        if (ms < ExplosionStartMs || ms > ExplosionEndMs) return Vector2.zero;
+        if (ms < Phase2StartMs || ms > Phase2EndMs) return Vector2.zero;
         return new Vector2(
             (Random.value - 0.5f) * 6f,
             (Random.value - 0.5f) * 6f
@@ -505,17 +557,17 @@ public class SplashScreen : MonoBehaviour
 
         // [L2] 별 — 폭발 구간에는 알파 다운 (0.2 배), 그 외 1.0 배
         float starAlphaScale = 1.0f;
-        if (enableStarDim && _elapsedMs >= ExplosionStartMs && _elapsedMs <= ExplosionEndMs)
+        if (enableStarDim && _elapsedMs >= Phase2StartMs && _elapsedMs <= Phase2EndMs)
         {
             starAlphaScale = 0.2f;
         }
         DrawSparkles(globalAlpha, starAlphaScale);
 
         // 행성 Rect 사전 계산 — L4 히트 헤이즈와 L3 행성이 같은 기준 Rect 공유.
-        // 헤이즈는 셰이크/부유 오프셋을 따라가지 않음 (배경과 행성 사이 정적 광학 다리).
+        // 헤이즈는 셰이크를 따라가지 않음 (배경과 행성 사이 정적 광학 다리).
         // v3 §4.8: 행성 박스 60% → 75%. y 오프셋(-safeH*0.05f) 은 그대로 유지.
         float planetSide = Mathf.Min(safeW, safeH) * 0.75f;
-        planetSide *= ComputePlanetScale(_elapsedMs);
+        planetSide *= ComputeHoldBreath(_elapsedMs);
         float planetBaseX = safeX + (safeW - planetSide) * 0.5f;
         float planetBaseY = safeY + (safeH - planetSide) * 0.5f - safeH * 0.05f;
         Rect planetBaseRect = new Rect(planetBaseX, planetBaseY, planetSide, planetSide);
@@ -523,39 +575,30 @@ public class SplashScreen : MonoBehaviour
         // [L4] 히트 헤이즈 (행성 PNG 아래) — L3 보다 먼저 그림.
         DrawHeatHaze(globalAlpha, planetBaseRect);
 
-        // [L3] 행성 애니메이션 (safe area 중앙) — 단발, loop 금지
-        // 프레임 간 cross-fade + 응집 단계 스케일 ease + 미세 부유 + 폭발 셰이크
-        if (frames != null && frames.Length > 0)
+        // [L3] 행성 애니메이션 (safe area 중앙) — 단발, loop 금지.
+        // phase 별 frame array 에서 (curTex, nextTex, blend) 합성.
+        var (curTex, nextTex, blend) = ComputeBlend(_elapsedMs);
+
+        if (curTex != null)
         {
-            var (curIdx, nextIdx, fadeT) = ComputeFrameBlend(_elapsedMs);
-            curIdx = Mathf.Clamp(curIdx, 0, frames.Length - 1);
-            nextIdx = Mathf.Clamp(nextIdx, 0, frames.Length - 1);
+            // 폭발 구간 셰이크 — 헤이즈는 따라가지 않음
+            Vector2 shake = ShakeOffset();
+            Rect planetRect = new Rect(
+                planetBaseRect.x + shake.x,
+                planetBaseRect.y + shake.y,
+                planetBaseRect.width,
+                planetBaseRect.height
+            );
 
-            Texture2D curTex = frames[curIdx];
-            Texture2D nextTex = frames[nextIdx];
+            // 현재 frame (1 - blend)
+            GUI.color = new Color(1f, 1f, 1f, (1f - blend) * globalAlpha);
+            GUI.DrawTexture(planetRect, curTex, ScaleMode.ScaleToFit);
 
-            if (curTex != null)
+            // 다음 frame (blend) — 같은 Rect 에 cross-fade
+            if (blend > 0f && nextTex != null && nextTex != curTex)
             {
-                // 폭발 구간 셰이크 + 응집 구간 미세 부유 (중첩 의도) — 헤이즈는 따라가지 않음
-                Vector2 shake = ShakeOffset();
-                Vector2 floatOff = CoalesceFloat(_elapsedMs);
-                Rect planetRect = new Rect(
-                    planetBaseRect.x + shake.x + floatOff.x,
-                    planetBaseRect.y + shake.y + floatOff.y,
-                    planetBaseRect.width,
-                    planetBaseRect.height
-                );
-
-                // 현재 프레임 (1 - fadeT)
-                GUI.color = new Color(1f, 1f, 1f, (1f - fadeT) * globalAlpha);
-                GUI.DrawTexture(planetRect, curTex, ScaleMode.ScaleToFit);
-
-                // 다음 프레임 (fadeT) — 같은 Rect 에 cross-fade
-                if (fadeT > 0f && nextTex != null && nextIdx != curIdx)
-                {
-                    GUI.color = new Color(1f, 1f, 1f, fadeT * globalAlpha);
-                    GUI.DrawTexture(planetRect, nextTex, ScaleMode.ScaleToFit);
-                }
+                GUI.color = new Color(1f, 1f, 1f, blend * globalAlpha);
+                GUI.DrawTexture(planetRect, nextTex, ScaleMode.ScaleToFit);
             }
         }
 
@@ -616,7 +659,7 @@ public class SplashScreen : MonoBehaviour
             GUI.enabled = buttonEnabled;
             if (GUI.Button(btnRect, startButtonLabel, _buttonStyle))
             {
-                Debug.Log("[POC] SplashScreen v2: start button tapped, fading out → " + nextScene);
+                Debug.Log("[POC] SplashScreen v4: start button tapped, fading out → " + nextScene);
                 _isFadingOut = true;
                 _fadeOutStartTime = Time.time;
             }
@@ -661,7 +704,7 @@ public class SplashScreen : MonoBehaviour
 
     /// <summary>
     /// 풀스크린 라디얼 그라데이션 배경. 베이스(중앙 #1a1228 → 외곽 #040616) 위에
-    /// 폭발 구간(1500~2200ms) 동안 펄스(중앙 #5a2418 → 외곽 #040616) 텍스처를
+    /// 폭발 구간(Phase2: 4000~5500ms) 동안 펄스(중앙 #5a2418 → 외곽 #040616) 텍스처를
     /// sin(t*π) cross-fade 로 덮는다.
     /// </summary>
     private void DrawBackgroundGradient(float globalAlpha)
@@ -673,9 +716,9 @@ public class SplashScreen : MonoBehaviour
         if (enableBgPulse)
         {
             float ms = _elapsedMs;
-            if (ms >= ExplosionStartMs && ms <= ExplosionEndMs)
+            if (ms >= Phase2StartMs && ms <= Phase2EndMs)
             {
-                float t = (ms - ExplosionStartMs) / (ExplosionEndMs - ExplosionStartMs);
+                float t = (ms - Phase2StartMs) / (Phase2EndMs - Phase2StartMs);
                 pulseT = Mathf.Sin(t * Mathf.PI);
             }
         }
@@ -697,16 +740,16 @@ public class SplashScreen : MonoBehaviour
     }
 
     // ─────────────────────────────────────────────────────────────
-    // v3 통합 디자인 — L4 히트 헤이즈 (§4.4)
+    // v3 통합 디자인 — L4 히트 헤이즈 (§4.4) — v4 phase 타이밍 갱신
     // ─────────────────────────────────────────────────────────────
 
     /// <summary>
     /// 행성 중심 라디얼 alpha 그라데이션을 1.4× 크기로 그려 행성과 배경 사이를 광학적으로 연결.
-    /// 시간대별 alpha:
-    ///   - ~1500ms (폭발 전): 0 (헤이즈 없음)
-    ///   - 1500~2800ms (폭발~파편): 0.6
-    ///   - 2800~5800ms (응집): 0.4 → 0.15 lerp
-    ///   - 5800ms+ (hold): 0.15 정적
+    /// v4 타이밍 (spec §5.5):
+    ///   - ~Phase2Start (4000ms 이전, phase1 고요): 0 (헤이즈 없음)
+    ///   - Phase2 (4000~5500ms 빅뱅): 0.6 (peak)
+    ///   - Phase3 (5500~9000ms 응집): 0.6 → 0.15 lerp
+    ///   - Phase4 (9000~10000ms hold): 0.15 정적
     /// 헤이즈는 셰이크/부유를 따라가지 않음 — planetBaseRect 기준.
     /// </summary>
     private void DrawHeatHaze(float globalAlpha, Rect planetBaseRect)
@@ -715,18 +758,18 @@ public class SplashScreen : MonoBehaviour
 
         float ms = _elapsedMs;
         float hazeAlpha;
-        if (ms < ExplosionStartMs)
+        if (ms < Phase2StartMs)
         {
             hazeAlpha = 0f;
         }
-        else if (ms <= 2800f)
+        else if (ms <= Phase2EndMs)
         {
             hazeAlpha = 0.6f;
         }
-        else if (ms <= 5800f)
+        else if (ms <= Phase3EndMs)
         {
-            float t = (ms - 2800f) / 3000f;
-            hazeAlpha = Mathf.Lerp(0.4f, 0.15f, t);
+            float t = (ms - Phase2EndMs) / (Phase3EndMs - Phase2EndMs);
+            hazeAlpha = Mathf.Lerp(0.6f, 0.15f, t);
         }
         else
         {
