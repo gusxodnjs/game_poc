@@ -1,22 +1,33 @@
 """
 gen_splash_bgm.py — TERRA PoC 빅뱅 스플래시 BGM 트랙 절차적 생성기.
 
-- stdlib 만 사용 (wave, struct, math, random) — numpy 없음.
-- 출력: Assets/Audio/splash_bgm_v1.wav (44.1kHz mono 16-bit PCM, 약 8초)
-- 시퀀스 타이밍은 docs/splash_v2_bigbang.md 의 빅뱅 시퀀스에 동기.
+- stdlib 만 사용 (wave, struct, math, random, argparse) — numpy 없음.
+- 출력:
+    - v1: Assets/Audio/splash_bgm_v1.wav (44.1kHz mono 16-bit PCM, 약 8초)
+    - v2: Assets/Audio/splash_bgm_v2.wav (44.1kHz mono 16-bit PCM, 약 10초)
+- 시퀀스 타이밍은 docs/splash_v2_bigbang.md (v1) 와
+  docs/superpowers/specs/2026-05-21-splash-v4-design.md §4 (v2) 에 동기.
 
-구간 구조 (총 8000ms):
+v1 구간 구조 (총 8000ms):
 - 0–1500ms     : 무 → 작은 점. 110Hz + 220Hz 드론 (페이드인 0.0 → 0.15)
 - 1500–1700ms  : 임계 광원. 220Hz → 880Hz 글리산도 sweep
 - 1700–2200ms  : 폭발. 화이트 노이즈 burst + 55Hz boom
 - 2200–6500ms  : 응집 → 원시 행성. 110/165/220Hz 화음 패드 (LFO, detune)
 - 6500–8000ms  : 페이드아웃 (0.1 → 0.0)
 
+v2 구간 구조 (총 10000ms):
+- 0–4000ms     : 드론 페이드인
+- 4000–4500ms  : sweep
+- 4500–5500ms  : 폭발 (peak)
+- 5500–9000ms  : 화음 패드
+- 9000–10000ms : fade
+
 라이선스: CC0 1.0 Universal (생성 산출물 self-generated, TERRA PoC 팀).
 """
 
 from __future__ import annotations
 
+import argparse
 import math
 import os
 import random
@@ -29,15 +40,34 @@ from typing import List
 # ---------------------------------------------------------------------------
 
 SAMPLE_RATE = 44100
-OUTPUT_PATH = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-    "Assets",
-    "Audio",
-    "splash_bgm_v1.wav",
-)
 
-# 총 길이 (초). 시퀀스 8초.
-TOTAL_DURATION = 8.0
+_REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+# 버전별 타이밍 테이블. 각 (label, start_ms, end_ms) 튜플은 절대 시간 (ms).
+TIMINGS = {
+    "v1": {
+        "total_ms": 8000,
+        "sections": [
+            ("drone_in", 0, 1500),
+            ("sweep", 1500, 1700),
+            ("explosion", 1700, 2200),
+            ("pad", 2200, 6500),
+            ("fade", 6500, 8000),
+        ],
+        "output": os.path.join(_REPO_ROOT, "Assets", "Audio", "splash_bgm_v1.wav"),
+    },
+    "v2": {
+        "total_ms": 10000,
+        "sections": [
+            ("drone_in", 0, 4000),
+            ("sweep", 4000, 4500),
+            ("explosion", 4500, 5500),
+            ("pad", 5500, 9000),
+            ("fade", 9000, 10000),
+        ],
+        "output": os.path.join(_REPO_ROOT, "Assets", "Audio", "splash_bgm_v2.wav"),
+    },
+}
 
 # 재현 가능한 노이즈를 위해 시드 고정.
 random.seed(20260518)
@@ -183,52 +213,67 @@ def write_wav(path: str, samples: List[float], sample_rate: int = SAMPLE_RATE) -
 
 # ---------------------------------------------------------------------------
 # 구간별 트랙 생성 함수
+#
+# 각 함수는 (start_ms, end_ms) 를 받아 해당 구간 길이만큼의 샘플을 반환한다.
+# 내부 sub-timing (attack/decay 등) 은 구간 길이에 비례하지 않고,
+# 음향적으로 의미 있는 절대 시간 (또는 비율) 로 잡는다.
 # ---------------------------------------------------------------------------
 
 
-def section_void_drone() -> List[float]:
-    """0–1500ms: 낮은 드론, volume 0.0 → 0.15 페이드인."""
-    duration = 1.5
+def section_void_drone(start_ms: int, end_ms: int) -> List[float]:
+    """낮은 드론, volume 0.0 → 0.15 페이드인. 구간 전체에 걸쳐 페이드."""
+    duration = (end_ms - start_ms) / 1000.0
     drone_low = sine(110.0, duration)
     drone_mid = scale(sine(220.0, duration), 0.5)
     mixed = [a + b for a, b in zip(drone_low, drone_mid)]
-    # 페이드인.
+    # 페이드인 (구간 전체).
     faded = fade(mixed, 0.0, 0.15)
     return faded
 
 
-def section_singularity_sweep() -> List[float]:
-    """1500–1700ms: 220Hz → 880Hz 글리산도 (0.2초). 임계 광원 압축감."""
-    duration = 0.2
+def section_singularity_sweep(start_ms: int, end_ms: int) -> List[float]:
+    """220Hz → 880Hz 글리산도. 임계 광원 압축감."""
+    duration = (end_ms - start_ms) / 1000.0
     sweep = sine_sweep(220.0, 880.0, duration)
-    # 짧은 attack, 거의 즉시 decay 시작.
-    enveloped = envelope(sweep, attack=0.02, decay=0.05)
+    # Attack/decay 는 구간 길이의 10% / 25% 로 비례 (짧은 구간 (0.2s) 에서는
+    # 기존 v1 값 (0.02s / 0.05s) 과 동일, 긴 구간 (0.5s) 에서는 비례 확대).
+    attack_s = duration * 0.10
+    decay_s = duration * 0.25
+    enveloped = envelope(sweep, attack=attack_s, decay=decay_s)
     return scale(enveloped, 0.25)
 
 
-def section_explosion() -> List[float]:
-    """1700–2200ms: 화이트 노이즈 burst (감쇠) + 55Hz boom."""
-    duration = 0.5
+def section_explosion(start_ms: int, end_ms: int) -> List[float]:
+    """화이트 노이즈 burst (감쇠) + 저주파 boom. 폭발 peak."""
+    duration = (end_ms - start_ms) / 1000.0
 
-    # 화이트 노이즈 burst: 빠른 attack, 긴 decay.
+    # 화이트 노이즈 burst: 빠른 attack (1%), 긴 decay (구간의 90%).
+    attack_s = min(0.005, duration * 0.01)
+    decay_s = duration * 0.90
     n = noise(duration)
-    n_env = envelope(n, attack=0.005, decay=0.45)
+    n_env = envelope(n, attack=attack_s, decay=decay_s)
     n_scaled = scale(n_env, 0.4)
 
-    # 저주파 boom (55Hz, 0.4초 감쇠).
-    boom_duration = 0.4
+    # 저주파 boom (55Hz). 구간의 80% 길이.
+    boom_duration = duration * 0.80
     boom = sine(55.0, boom_duration)
-    boom_env = envelope(boom, attack=0.01, decay=0.35)
+    boom_attack = min(0.01, boom_duration * 0.025)
+    boom_decay = boom_duration * 0.875
+    boom_env = envelope(boom, attack=boom_attack, decay=boom_decay)
     boom_scaled = scale(boom_env, 0.6)
     # boom 을 duration 길이로 zero-pad.
-    boom_padded = boom_scaled + [0.0] * (int(duration * SAMPLE_RATE) - len(boom_scaled))
+    pad_len = int(duration * SAMPLE_RATE) - len(boom_scaled)
+    if pad_len > 0:
+        boom_padded = boom_scaled + [0.0] * pad_len
+    else:
+        boom_padded = boom_scaled[: int(duration * SAMPLE_RATE)]
 
     return [a + b for a, b in zip(n_scaled, boom_padded)]
 
 
-def section_ambient_pad() -> List[float]:
-    """2200–6500ms: 화음 패드 (110/165/220Hz, slight detune, LFO)."""
-    duration = 4.3
+def section_ambient_pad(start_ms: int, end_ms: int) -> List[float]:
+    """화음 패드 (110/165/220Hz, slight detune, LFO)."""
+    duration = (end_ms - start_ms) / 1000.0
 
     # 베이스 110Hz + 약간의 detune 사인.
     pad1 = sine(110.0, duration)
@@ -251,14 +296,36 @@ def section_ambient_pad() -> List[float]:
     # LFO 로 가벼운 진폭 변조 (0.3Hz, depth 0.15).
     modulated = lfo_modulate(chord, lfo_freq=0.3, lfo_depth=0.15)
 
-    # 전체 게인 0.1, 시작 부분에 짧은 페이드인 (응집 시작감), 끝은 자연스러운 hold.
+    # 전체 게인 0.1, 시작 부분에 짧은 페이드인 (응집 시작감).
     scaled = scale(modulated, 0.1 / 3.0)  # /3 화음 합산 대응.
-    # 첫 0.3초 페이드인.
+    # 첫 0.3초 페이드인 (구간 길이가 0.3초 미만이면 비율 조정).
     n = len(scaled)
-    fade_in_n = int(0.3 * SAMPLE_RATE)
+    fade_in_s = min(0.3, duration * 0.1)
+    fade_in_n = int(fade_in_s * SAMPLE_RATE)
     for i in range(min(fade_in_n, n)):
         scaled[i] *= i / fade_in_n
     return scaled
+
+
+def section_fade_tail(start_ms: int, end_ms: int) -> List[float]:
+    """페이드아웃 잔향 (110Hz + 220Hz). 1.0 → 0.0 페이드."""
+    duration = (end_ms - start_ms) / 1000.0
+    tail = sine(110.0, duration)
+    tail_detune = sine(220.0, duration)
+    tail_mixed = [(a + b * 0.5) for a, b in zip(tail, tail_detune)]
+    tail_scaled = scale(tail_mixed, 0.06)
+    tail_faded = fade(tail_scaled, 1.0, 0.0)
+    return tail_faded
+
+
+# 섹션 label → 합성 함수 매핑.
+SECTION_FUNCS = {
+    "drone_in": section_void_drone,
+    "sweep": section_singularity_sweep,
+    "explosion": section_explosion,
+    "pad": section_ambient_pad,
+    "fade": section_fade_tail,
+}
 
 
 # ---------------------------------------------------------------------------
@@ -266,50 +333,47 @@ def section_ambient_pad() -> List[float]:
 # ---------------------------------------------------------------------------
 
 
-def main() -> None:
-    total_samples = int(TOTAL_DURATION * SAMPLE_RATE)
+def render(version: str) -> List[float]:
+    """버전별 타이밍에 따라 전체 트랙을 합성."""
+    cfg = TIMINGS[version]
+    total_samples = int((cfg["total_ms"] / 1000.0) * SAMPLE_RATE)
     track = [0.0] * total_samples
 
-    # 0–1500ms : 드론.
-    drone = section_void_drone()
-    add_at(track, drone, start_sample=0)
+    for label, start_ms, end_ms in cfg["sections"]:
+        func = SECTION_FUNCS[label]
+        section = func(start_ms, end_ms)
+        start_sample = int((start_ms / 1000.0) * SAMPLE_RATE)
+        add_at(track, section, start_sample=start_sample)
 
-    # 1500–1700ms : sweep.
-    sweep = section_singularity_sweep()
-    add_at(track, sweep, start_sample=int(1.5 * SAMPLE_RATE))
+    # 마지막 안전장치: 전체 트랙에서 -1..1 범위 보장.
+    return mix(track)
 
-    # 1700–2200ms : 폭발.
-    explosion = section_explosion()
-    add_at(track, explosion, start_sample=int(1.7 * SAMPLE_RATE))
 
-    # 2200–6500ms : 앰비언트 패드.
-    pad = section_ambient_pad()
-    add_at(track, pad, start_sample=int(2.2 * SAMPLE_RATE))
+def main() -> None:
+    parser = argparse.ArgumentParser(description="TERRA PoC splash BGM 절차적 생성기.")
+    parser.add_argument(
+        "--version",
+        choices=["v1", "v2"],
+        default="v1",
+        help="생성할 BGM 버전 (default: v1).",
+    )
+    args = parser.parse_args()
 
-    # 6500–8000ms : 페이드아웃 (전체 트랙의 마지막 1.5초 게인 0.1 → 0.0).
-    # 패드가 6500ms 까지 자연스럽게 흐른 뒤, 6500–8000ms 사이에 잔향만 남기고 페이드.
-    # 패드는 이미 6500ms 에 끝났으므로 이 구간은 비어 있다.
-    # 자연스러운 잔향을 위해 패드 꼬리(110Hz 잔향) 를 1.5초 동안 페이드아웃.
-    tail_duration = 1.5
-    tail = sine(110.0, tail_duration)
-    tail_detune = sine(220.0, tail_duration)
-    tail_mixed = [(a + b * 0.5) for a, b in zip(tail, tail_detune)]
-    tail_scaled = scale(tail_mixed, 0.06)
-    tail_faded = fade(tail_scaled, 1.0, 0.0)
-    add_at(track, tail_faded, start_sample=int(6.5 * SAMPLE_RATE))
+    cfg = TIMINGS[args.version]
+    output_path = cfg["output"]
 
-    # 마지막 안전장치: 전체 트랙에서 -1..1 범위 보장. mix() 가 clip 수행.
-    track_clipped = mix(track)
+    track = render(args.version)
 
     # 출력 디렉토리 생성 + 파일 쓰기.
-    write_wav(OUTPUT_PATH, track_clipped, SAMPLE_RATE)
+    write_wav(output_path, track, SAMPLE_RATE)
 
     # 결과 보고.
-    file_size = os.path.getsize(OUTPUT_PATH)
-    print(f"Wrote: {OUTPUT_PATH}")
+    file_size = os.path.getsize(output_path)
+    print(f"Wrote: {output_path}")
+    print(f"  Version     : {args.version}")
     print(f"  Sample rate : {SAMPLE_RATE} Hz")
-    print(f"  Duration    : {len(track_clipped) / SAMPLE_RATE:.3f} s")
-    print(f"  Samples     : {len(track_clipped)}")
+    print(f"  Duration    : {len(track) / SAMPLE_RATE:.3f} s")
+    print(f"  Samples     : {len(track)}")
     print(f"  File size   : {file_size} bytes ({file_size / 1024:.1f} KB)")
 
 

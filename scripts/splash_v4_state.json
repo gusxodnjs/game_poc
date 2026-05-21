@@ -1,0 +1,46 @@
+{
+  "phase1": {
+    "base_object_id": "04a54a30-9c16-450b-8466-a73efbf39431",
+    "base_object_id_review_source": "b1694af0-379e-4be1-9b0f-2af7ee2f1e94",
+    "base_object_id_attempt1_failed": "3c20a101-e1f0-434c-bc86-22b75b35c0d9",
+    "animation_id": [
+      "b966accf-e71a-490f-88aa-87b153ff8fa6",
+      "ee921c0e-4719-4f37-9526-a41d3ece0440"
+    ],
+    "animation_note": "256x256 max frame_count=8 per anim; queued 2x6 (returned 7 each), used 6+6 = 12 frames total. emerge=b966accf, brighten=ee921c0e",
+    "frame_url_pattern": "object_id/animations/<anim_id>/unknown/<i>.png",
+    "frames_failures": []
+  },
+  "phase2": {
+    "base_object_id": "e6afe259-b042-4adf-b733-6d21baca75be",
+    "base_object_id_review_source": "2f35fe88-3f4b-424c-9328-ecee58046b95",
+    "animation_id": [
+      "c798bfa2-7bc6-468a-ae45-72890f17aa97"
+    ],
+    "animation_note": "256x256 single anim frame_count=6 (빅뱅 폭발 충격파); returned 7 frames, used first 6. shockwave=c798bfa2",
+    "frame_url_pattern": "object_id/animations/<anim_id>/unknown/<i>.png",
+    "frames_failures": []
+  },
+  "phase3": {
+    "base_object_id": "242e3d7c-943f-44cd-8f9f-0421d9b63aea",
+    "base_object_id_review_source": "28c2b0ea-6a62-46a5-8b06-4f52f0527d24",
+    "animation_id": [
+      "eee7bb09-9be3-4ea7-8e54-e6b7c9b5ac30"
+    ],
+    "animation_note": "256x256 single anim frame_count=8 (응집 accretion); returned 9 frames, used first 8. accretion=eee7bb09",
+    "frame_url_pattern": "object_id/animations/<anim_id>/unknown/<i>.png",
+    "frames_failures": [
+      "initial parallel download: frames 2,4,5,7 hit HTTP 520/525; retried sequentially, all succeeded"
+    ]
+  },
+  "phase4": {
+    "base_object_id": "c7577c78-c01c-4826-88c1-6caad8e6dd9b",
+    "base_object_id_review_source": "d20e1684-73d9-481f-a233-0748c4d6eeca",
+    "animation_id": [
+      "d361ae9e-25ad-44b1-9dc2-4922835046a5"
+    ],
+    "animation_note": "256x256 single anim frame_count=4 (행성 미세 호흡); returned 5 frames, used first 4. breathing=d361ae9e",
+    "frame_url_pattern": "object_id/animations/<anim_id>/unknown/<i>.png",
+    "frames_failures": []
+  }
+}
