@@ -10,5 +10,15 @@
     "animation_note": "256x256 max frame_count=8 per anim; queued 2x6 (returned 7 each), used 6+6 = 12 frames total. emerge=b966accf, brighten=ee921c0e",
     "frame_url_pattern": "object_id/animations/<anim_id>/unknown/<i>.png",
     "frames_failures": []
+  },
+  "phase2": {
+    "base_object_id": "e6afe259-b042-4adf-b733-6d21baca75be",
+    "base_object_id_review_source": "2f35fe88-3f4b-424c-9328-ecee58046b95",
+    "animation_id": [
+      "c798bfa2-7bc6-468a-ae45-72890f17aa97"
+    ],
+    "animation_note": "256x256 single anim frame_count=6 (빅뱅 폭발 충격파); returned 7 frames, used first 6. shockwave=c798bfa2",
+    "frame_url_pattern": "object_id/animations/<anim_id>/unknown/<i>.png",
+    "frames_failures": []
   }
 }
