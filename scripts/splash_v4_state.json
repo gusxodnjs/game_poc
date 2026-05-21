@@ -32,5 +32,15 @@
     "frames_failures": [
       "initial parallel download: frames 2,4,5,7 hit HTTP 520/525; retried sequentially, all succeeded"
     ]
+  },
+  "phase4": {
+    "base_object_id": "c7577c78-c01c-4826-88c1-6caad8e6dd9b",
+    "base_object_id_review_source": "d20e1684-73d9-481f-a233-0748c4d6eeca",
+    "animation_id": [
+      "d361ae9e-25ad-44b1-9dc2-4922835046a5"
+    ],
+    "animation_note": "256x256 single anim frame_count=4 (행성 미세 호흡); returned 5 frames, used first 4. breathing=d361ae9e",
+    "frame_url_pattern": "object_id/animations/<anim_id>/unknown/<i>.png",
+    "frames_failures": []
   }
 }
