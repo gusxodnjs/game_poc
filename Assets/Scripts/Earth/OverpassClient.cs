@@ -45,7 +45,11 @@ public class OverpassClient : MonoBehaviour
         int attempt = 0;
         while (attempt < 2 && result == null)
         {
-            using (var req = UnityWebRequest.Post(Endpoint, "data=" + UnityWebRequest.EscapeURL(query)))
+            // WWWForm이 data 필드를 한 번만 인코딩(application/x-www-form-urlencoded).
+            // query를 미리 EscapeURL하면 이중 인코딩 → 400. 반드시 raw query 전달.
+            var form = new WWWForm();
+            form.AddField("data", query);
+            using (var req = UnityWebRequest.Post(Endpoint, form))
             {
                 req.SetRequestHeader("User-Agent", UserAgent);
                 req.timeout = 30;
@@ -60,6 +64,7 @@ public class OverpassClient : MonoBehaviour
             }
             attempt++;
         }
+        // 모든 경로에서 _busy 해제 보장 (early yield break 없음) → 데드락 방지.
         _busy = false;
         onDone?.Invoke(result);
     }

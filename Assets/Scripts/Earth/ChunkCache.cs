@@ -48,41 +48,52 @@ public class ChunkCache : MonoBehaviour
         _loading.Add(key);
 
         string p = PathFor(cx, cy);
+        ChunkData cd = null;
+
+        // 디스크 캐시 히트: cd 설정 후 공통 tail로 합류 (Overpass 페치 생략).
         if (File.Exists(p))
         {
             byte[] bytes = null;
             try { bytes = File.ReadAllBytes(p); } catch { }
-            if (bytes != null)
+            if (bytes != null) cd = ChunkData.Deserialize(cx, cy, bytes);
+        }
+
+        if (cd == null)
+        {
+            var (otx, oty) = GeoTileGrid.ChunkOriginTile(cx, cy);
+            int n = GeoTileGrid.ChunkTiles;
+            var (latNW, lonNW) = GeoTileGrid.TileCenterLatLon(otx - 1, oty - 1);
+            var (latSE, lonSE) = GeoTileGrid.TileCenterLatLon(otx + n, oty + n);
+            double south = System.Math.Min(latNW, latSE);
+            double north = System.Math.Max(latNW, latSE);
+            double west = System.Math.Min(lonNW, lonSE);
+            double east = System.Math.Max(lonNW, lonSE);
+
+            // 코루틴이라 yield는 try 밖. 페치 후 파싱/래스터화/쓰기만 try로 보호.
+            string json = null;
+            yield return OverpassClient.Instance.Fetch(south, west, north, east, r => json = r);
+
+            if (!string.IsNullOrEmpty(json))
             {
-                _mem[key] = ChunkData.Deserialize(cx, cy, bytes);
-                _loading.Remove(key);
-                yield break;
+                try
+                {
+                    var feats = OverpassParser.Parse(json);
+                    cd = FeatureRasterizer.Rasterize(cx, cy, feats);
+                    try { File.WriteAllBytes(p, cd.Serialize()); } catch { }
+                }
+                catch (System.Exception e)
+                {
+                    Debug.LogWarning($"[Earth] chunk ({cx},{cy}) parse/raster 실패 → 빈 Grass: {e.Message}");
+                    cd = new ChunkData(cx, cy);
+                }
+            }
+            else
+            {
+                cd = new ChunkData(cx, cy);
             }
         }
 
-        var (otx, oty) = GeoTileGrid.ChunkOriginTile(cx, cy);
-        int n = GeoTileGrid.ChunkTiles;
-        var (latNW, lonNW) = GeoTileGrid.TileCenterLatLon(otx - 1, oty - 1);
-        var (latSE, lonSE) = GeoTileGrid.TileCenterLatLon(otx + n, oty + n);
-        double south = System.Math.Min(latNW, latSE);
-        double north = System.Math.Max(latNW, latSE);
-        double west = System.Math.Min(lonNW, lonSE);
-        double east = System.Math.Max(lonNW, lonSE);
-
-        string json = null;
-        yield return OverpassClient.Instance.Fetch(south, west, north, east, r => json = r);
-
-        ChunkData cd;
-        if (!string.IsNullOrEmpty(json))
-        {
-            var feats = OverpassParser.Parse(json);
-            cd = FeatureRasterizer.Rasterize(cx, cy, feats);
-            try { File.WriteAllBytes(p, cd.Serialize()); } catch { }
-        }
-        else
-        {
-            cd = new ChunkData(cx, cy);
-        }
+        // 공통 tail: 모든 경로(디스크 히트/정상/예외 폴백)가 여기로 합류.
         _mem[key] = cd;
         _loading.Remove(key);
     }
