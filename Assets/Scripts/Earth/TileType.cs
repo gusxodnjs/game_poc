@@ -8,5 +8,6 @@ public enum TileType : byte
     Path = 1,
     Water = 2,
     Forest = 3,
-    // Building = 4,  // v2
+    Road = 4,
+    Building = 5,
 }

@@ -45,6 +45,19 @@ public class FeatureRasterizerTests
         Assert.AreEqual(TileType.Water, cd.Tiles[16, 16]);
     }
 
+    [Test] public void Building_OverridesWater_Priority()
+    {
+        var (cx, cy) = SeoulChunk();
+        var (clat, clon) = ChunkCenterLatLon(cx, cy);
+        double d = 0.01;
+        System.Collections.Generic.List<(double, double)> Sq() => new(){
+            (clat-d,clon-d),(clat-d,clon+d),(clat+d,clon+d),(clat+d,clon-d),(clat-d,clon-d)};
+        var water = new OsmFeature { Type = TileType.Water, Geom = OsmGeom.Polygon, Points = Sq() };
+        var bld   = new OsmFeature { Type = TileType.Building, Geom = OsmGeom.Polygon, Points = Sq() };
+        var cd = FeatureRasterizer.Rasterize(cx, cy, new System.Collections.Generic.List<OsmFeature>{ water, bld });
+        Assert.AreEqual(TileType.Building, cd.Tiles[16, 16]);
+    }
+
     private (double lat, double lon) ChunkCenterLatLon(long cx, long cy)
     {
         var (tx, ty) = GeoTileGrid.ChunkOriginTile(cx, cy);

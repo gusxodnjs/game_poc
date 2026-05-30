@@ -39,6 +39,7 @@ public class OverpassClient : MonoBehaviour
             $"way[\"landuse\"=\"forest\"]({south},{west},{north},{east});" +
             $"way[\"natural\"=\"wood\"]({south},{west},{north},{east});" +
             $"way[\"leisure\"=\"park\"]({south},{west},{north},{east});" +
+            $"way[\"building\"]({south},{west},{north},{east});" +
             $");out geom;";
 
         string result = null;

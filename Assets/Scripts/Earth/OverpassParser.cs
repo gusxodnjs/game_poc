@@ -43,10 +43,26 @@ public static class OverpassParser
         return result;
     }
 
+    private static readonly System.Collections.Generic.HashSet<string> RoadHighways = new()
+    {
+        "motorway","trunk","primary","secondary","tertiary","unclassified",
+        "residential","service","living_street",
+        "motorway_link","trunk_link","primary_link","secondary_link","tertiary_link",
+    };
+    private static readonly System.Collections.Generic.HashSet<string> BigRoads = new()
+    {
+        "motorway","trunk","primary","secondary","motorway_link","trunk_link","primary_link",
+    };
+
     private static bool Classify(Dictionary<string, object> tags, out TileType type, out OsmGeom geom, out int buffer)
     {
         type = TileType.Grass; geom = OsmGeom.Polyline; buffer = 0;
-        if (tags.ContainsKey("highway")) { type = TileType.Path; geom = OsmGeom.Polyline; buffer = 1; return true; }
+        if (tags.TryGetValue("highway", out var hwObj) && hwObj is string hw)
+        {
+            if (RoadHighways.Contains(hw)) { type = TileType.Road; geom = OsmGeom.Polyline; buffer = BigRoads.Contains(hw) ? 2 : 1; return true; }
+            type = TileType.Path; geom = OsmGeom.Polyline; buffer = 1; return true;
+        }
+        if (tags.ContainsKey("building")) { type = TileType.Building; geom = OsmGeom.Polygon; buffer = 0; return true; }
         if (Has(tags, "waterway", "river") || Has(tags, "waterway", "stream"))
             { type = TileType.Water; geom = OsmGeom.Polyline; buffer = 1; return true; }
         if (Has(tags, "natural", "water") || tags.ContainsKey("water") || Has(tags, "waterway", "riverbank"))

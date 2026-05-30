@@ -1,12 +1,14 @@
 // FeatureRasterizer.cs — OSM 피처 → 청크 32×32 TileType. 순수 함수.
-// 우선순위: Water > Path > Forest > Grass. 낮은 우선순위가 높은 걸 못 덮음.
+// 우선순위: Building > Water > Road > Path > Forest > Grass. 낮은 우선순위가 높은 걸 못 덮음.
 using System.Collections.Generic;
 
 public static class FeatureRasterizer
 {
     private static int Priority(TileType t) => t switch
     {
-        TileType.Water => 3,
+        TileType.Building => 5,
+        TileType.Water => 4,
+        TileType.Road => 3,
         TileType.Path => 2,
         TileType.Forest => 1,
         _ => 0,
