@@ -68,6 +68,8 @@ public static class PocBuildPipeline
         ObjectsDir + "/tuft_grass_c_16x16.png",
         ObjectsDir + "/flower_white_16x16.png",
         ObjectsDir + "/flower_red_16x16.png",
+        ObjectsDir + "/house_a_64x64.png",
+        ObjectsDir + "/house_b_64x64.png",
     };
 
     private static void EnsureTilesetTextureSettings()
@@ -149,6 +151,8 @@ public static class PocBuildPipeline
         tmSo.FindProperty("tuftC").objectReferenceValue       = AssetDatabase.LoadAssetAtPath<Texture2D>(ObjectsDir + "/tuft_grass_c_16x16.png");
         tmSo.FindProperty("flowerWhite").objectReferenceValue = AssetDatabase.LoadAssetAtPath<Texture2D>(ObjectsDir + "/flower_white_16x16.png");
         tmSo.FindProperty("flowerRed").objectReferenceValue   = AssetDatabase.LoadAssetAtPath<Texture2D>(ObjectsDir + "/flower_red_16x16.png");
+        tmSo.FindProperty("houseA").objectReferenceValue = AssetDatabase.LoadAssetAtPath<Texture2D>(ObjectsDir + "/house_a_64x64.png");
+        tmSo.FindProperty("houseB").objectReferenceValue = AssetDatabase.LoadAssetAtPath<Texture2D>(ObjectsDir + "/house_b_64x64.png");
         tmSo.ApplyModifiedPropertiesWithoutUndo();
         int tilesetLoaded = 0;
         foreach (var path in TilesetPaths)

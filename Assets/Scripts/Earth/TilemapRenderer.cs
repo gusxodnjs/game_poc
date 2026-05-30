@@ -27,6 +27,10 @@ public class TilemapRenderer : MonoBehaviour
     [SerializeField] private Texture2D bushTex;
     [SerializeField] private Texture2D stumpTex;
 
+    [Header("건물 → 하우스 (64x64 투명·하단앵커)")]
+    [SerializeField] private Texture2D houseA;
+    [SerializeField] private Texture2D houseB;
+
     [Header("잔디 데코 (풀포기/꽃, 16x16 투명·하단앵커)")]
     [SerializeField] private Texture2D tuftA;
     [SerializeField] private Texture2D tuftB;
@@ -57,6 +61,7 @@ public class TilemapRenderer : MonoBehaviour
     private Sprite[] _grassSprites; // 변형 4종
     private Sprite[][] _autoSheets; // [(int)TileType][cornerIndex 0..15]
     private Sprite _treeA, _treeB, _bush, _stump; // 오브젝트(하단앵커)
+    private Sprite _houseA, _houseB; // 건물 → 하우스(하단앵커)
     private Sprite _tuftA, _tuftB, _tuftC, _flowerW, _flowerR; // 잔디 데코(하단앵커)
 
     // 플레이어(GPS)의 화면 중심 대비 GUI 오프셋(px). PlayerAvatar 가 소비.
@@ -93,6 +98,7 @@ public class TilemapRenderer : MonoBehaviour
         _treeB = MakeObjSprite(treePineB);
         _bush  = MakeObjSprite(bushTex);
         _stump = MakeObjSprite(stumpTex);
+        _houseA = MakeObjSprite(houseA); _houseB = MakeObjSprite(houseB);
 
         _tuftA = MakeObjSprite(tuftA); _tuftB = MakeObjSprite(tuftB); _tuftC = MakeObjSprite(tuftC);
         _flowerW = MakeObjSprite(flowerWhite); _flowerR = MakeObjSprite(flowerRed);
@@ -236,7 +242,7 @@ public class TilemapRenderer : MonoBehaviour
                 TileType sw = TileTypeAt(gx - 1, gy);
                 TileType se = TileTypeAt(gx,     gy);
                 TileType f = TopFeature(nw, ne, sw, se);
-                if (f == TileType.Grass) continue;
+                if (f == TileType.Grass || f == TileType.Building) continue; // 건물 풋프린트는 잔디 + 하우스 오브젝트로 표현
                 var sheet = _autoSheets[(int)f];
                 int ci = (nw == f ? 8 : 0) + (ne == f ? 4 : 0) + (sw == f ? 2 : 0) + (se == f ? 1 : 0);
                 Sprite s = (sheet != null) ? sheet[ci] : null;
@@ -307,6 +313,14 @@ public class TilemapRenderer : MonoBehaviour
         jx = (((hh >> 4) & 0xFFu) / 255f - 0.5f) * 0.5f;
         jy = (((hh >> 12) & 0xFFu) / 255f - 0.5f) * 0.5f;
         TileType tt = TileTypeAt(tx, ty);
+        if (tt == TileType.Building)
+        {
+            // 풋프린트 좌상단 타일에만 집 1채(왼쪽·위가 건물이면 스킵 → 중복 방지)
+            bool leftB = TileTypeAt(tx - 1, ty) == TileType.Building;
+            bool upB   = TileTypeAt(tx, ty - 1) == TileType.Building;
+            if (!leftB && !upB) { jx = 0.5f; jy = 0.3f; return ((hh >> 1) & 1u) == 0u ? _houseA : _houseB; }
+            return null; // 나머지 건물 타일은 비움(잔디)
+        }
         if (tt == TileType.Forest)
         {
             // 거의 모든 forest 타일에 나무 → 빽빽한 숲
