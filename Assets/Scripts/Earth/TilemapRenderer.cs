@@ -11,8 +11,8 @@ public class TilemapRenderer : MonoBehaviour
     [SerializeField] private double initialLat = 37.5663;
     [SerializeField] private double initialLon = 126.9779;
 
-    [Header("베이스 (grass 단일 32x32)")]
-    [SerializeField] private Texture2D grassTex;
+    [Header("베이스 (grass 변형 4종, 32x32)")]
+    [SerializeField] private Texture2D[] grassVariants;
 
     [Header("오토타일 시트 (각 128x128, 4-corner Wang, Layout A)")]
     [SerializeField] private Texture2D pathSheet;
@@ -33,7 +33,7 @@ public class TilemapRenderer : MonoBehaviour
     private readonly Dictionary<(long, long), SpriteRenderer> _ovActive = new();
     private readonly Stack<SpriteRenderer> _ovPool = new();
 
-    private Sprite _grassSprite;
+    private Sprite[] _grassSprites; // 변형 4종
     private Sprite[][] _autoSheets; // [(int)TileType][cornerIndex 0..15]
 
     private void Awake()
@@ -53,7 +53,8 @@ public class TilemapRenderer : MonoBehaviour
 
     private void BuildSprites()
     {
-        _grassSprite = MakeSprite(grassTex);
+        _grassSprites = new Sprite[grassVariants != null ? grassVariants.Length : 0];
+        for (int i = 0; i < _grassSprites.Length; i++) _grassSprites[i] = MakeSprite(grassVariants[i]);
         _autoSheets = new Sprite[6][];
         _autoSheets[(int)TileType.Path]     = SliceSheet(pathSheet);
         _autoSheets[(int)TileType.Road]     = SliceSheet(roadSheet);
@@ -129,6 +130,14 @@ public class TilemapRenderer : MonoBehaviour
         return best;
     }
 
+    // 타일좌표 → 결정론적 해시(같은 위치=항상 같은 변형/flip).
+    private static uint TileHash(long tx, long ty)
+    {
+        ulong h = (ulong)(tx * 73856093L) ^ (ulong)(ty * 19349663L);
+        h ^= h >> 13; h *= 0x5bd1e995UL; h ^= h >> 15;
+        return (uint)h;
+    }
+
     private void Refresh()
     {
         if (mapCamera == null) return;
@@ -149,7 +158,15 @@ public class TilemapRenderer : MonoBehaviour
                 baseNeeded.Add((tx, ty));
                 if (!_baseActive.TryGetValue((tx, ty), out var sr)) { sr = AcquireBase(); _baseActive[(tx, ty)] = sr; }
                 sr.transform.localPosition = new Vector3((float)(tx + 0.5 - centerTxF), (float)-(ty + 0.5 - centerTyF), 0f);
-                sr.sprite = _grassSprite;
+                if (_grassSprites != null && _grassSprites.Length > 0)
+                {
+                    uint hh = TileHash(tx, ty);
+                    var gs = _grassSprites[hh % (uint)_grassSprites.Length];
+                    sr.sprite = gs;
+                    sr.flipX = ((hh >> 8) & 1u) == 1u;
+                    sr.flipY = ((hh >> 9) & 1u) == 1u;
+                }
+                else { sr.sprite = null; }
             }
         ReleaseUnneeded(_baseActive, baseNeeded, _basePool);
 

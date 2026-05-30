@@ -45,7 +45,10 @@ public static class PocBuildPipeline
     // grass=32×32 단일, 나머지는 128×128 autotile 시트 (렌더러가 코드로 슬라이스).
     private const string TilesetDir = "Assets/world/tiles";
     private static readonly string[] TilesetPaths = {
-        TilesetDir + "/grass_32.png",
+        TilesetDir + "/grass_v0_32.png",
+        TilesetDir + "/grass_v1_32.png",
+        TilesetDir + "/grass_v2_32.png",
+        TilesetDir + "/grass_v3_32.png",
         TilesetDir + "/path_auto_128.png",
         TilesetDir + "/road_auto_128.png",
         TilesetDir + "/water_auto_128.png",
@@ -86,7 +89,7 @@ public static class PocBuildPipeline
             cam.orthographicSize = 4.5f; // ≈27m 가시 (Pikmin 줌)
             cam.transform.position = new Vector3(0f, 0f, -10f);
             cam.clearFlags = CameraClearFlags.SolidColor;
-            cam.backgroundColor = new Color32(0x2e, 0x7d, 0x32, 0xff); // 풀밭 톤 placeholder
+            cam.backgroundColor = new Color32(0x82, 0xcf, 0x1c, 0xff); // grass 톤 (이음새 은폐)
             cam.nearClipPlane = 0.1f;
             cam.farClipPlane = 100f;
         }
@@ -96,7 +99,12 @@ public static class PocBuildPipeline
         var map = new GameObject("MapRoot");
         var tilemap = map.AddComponent<TilemapRenderer>();
         var tmSo = new SerializedObject(tilemap);
-        tmSo.FindProperty("grassTex").objectReferenceValue      = AssetDatabase.LoadAssetAtPath<Texture2D>(TilesetDir + "/grass_32.png");
+        var gv = tmSo.FindProperty("grassVariants");
+        gv.arraySize = 4;
+        gv.GetArrayElementAtIndex(0).objectReferenceValue = AssetDatabase.LoadAssetAtPath<Texture2D>(TilesetDir + "/grass_v0_32.png");
+        gv.GetArrayElementAtIndex(1).objectReferenceValue = AssetDatabase.LoadAssetAtPath<Texture2D>(TilesetDir + "/grass_v1_32.png");
+        gv.GetArrayElementAtIndex(2).objectReferenceValue = AssetDatabase.LoadAssetAtPath<Texture2D>(TilesetDir + "/grass_v2_32.png");
+        gv.GetArrayElementAtIndex(3).objectReferenceValue = AssetDatabase.LoadAssetAtPath<Texture2D>(TilesetDir + "/grass_v3_32.png");
         tmSo.FindProperty("pathSheet").objectReferenceValue     = AssetDatabase.LoadAssetAtPath<Texture2D>(TilesetDir + "/path_auto_128.png");
         tmSo.FindProperty("roadSheet").objectReferenceValue     = AssetDatabase.LoadAssetAtPath<Texture2D>(TilesetDir + "/road_auto_128.png");
         tmSo.FindProperty("waterSheet").objectReferenceValue    = AssetDatabase.LoadAssetAtPath<Texture2D>(TilesetDir + "/water_auto_128.png");
@@ -106,7 +114,7 @@ public static class PocBuildPipeline
         int tilesetLoaded = 0;
         foreach (var path in TilesetPaths)
             if (AssetDatabase.LoadAssetAtPath<Texture2D>(path) != null) tilesetLoaded++;
-        Debug.Log("[POC] TilemapRenderer wired: tileset=" + tilesetLoaded + "/6");
+        Debug.Log("[POC] TilemapRenderer wired: tileset=" + tilesetLoaded + "/9");
 
         var gps = new GameObject("GpsRoot");
         var gpsCheck = gps.AddComponent<GpsCheck>();
