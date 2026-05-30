@@ -348,23 +348,31 @@ public class TilemapRenderer : MonoBehaviour
         float scroll = Input.mouseScrollDelta.y;
         if (Mathf.Abs(scroll) > 0.01f) SetZoom(mapCamera.orthographicSize * (1f - scroll * 0.1f));
         if (!Input.GetMouseButton(0)) { _dragging = false; return; }
-        Vector2 pos = (Vector2)Input.mousePosition;
-        if (!_dragging) { _dragging = true; _lastDragPos = pos; return; }
-        PanByDelta(pos - _lastDragPos);
-        _lastDragPos = pos;
+        Vector2 mpos = (Vector2)Input.mousePosition;
+        if (!_dragging) { _dragging = true; _lastDragPos = mpos; return; }
+        PanByDelta(mpos - _lastDragPos);
+        _lastDragPos = mpos;
 #else
-        if (Input.touchCount != 2) { _dragging = false; _prevPinchDist = -1f; return; }
-        var t0 = Input.GetTouch(0); var t1 = Input.GetTouch(1);
-        float dist = Vector2.Distance(t0.position, t1.position);
-        Vector2 pos = (t0.position + t1.position) * 0.5f;
-        if (!_dragging) { _dragging = true; _lastDragPos = pos; _prevPinchDist = dist; return; }
-        // 핀치 줌: 손가락 사이 거리가 멀어지면 zoom in(orthoSize 감소)
-        if (_prevPinchDist > 1f && Mathf.Abs(dist - _prevPinchDist) > 1f)
-            SetZoom(mapCamera.orthographicSize * (_prevPinchDist / Mathf.Max(1f, dist)));
-        _prevPinchDist = dist;
-        // 팬: 두 손가락 중점 이동
-        PanByDelta(pos - _lastDragPos);
-        _lastDragPos = pos;
+        if (Input.touchCount >= 2)
+        {
+            // 두 손가락 = 핀치 줌만 (팬 안 함)
+            var t0 = Input.GetTouch(0); var t1 = Input.GetTouch(1);
+            float dist = Vector2.Distance(t0.position, t1.position);
+            if (_prevPinchDist > 1f && Mathf.Abs(dist - _prevPinchDist) > 1f)
+                SetZoom(mapCamera.orthographicSize * (_prevPinchDist / Mathf.Max(1f, dist)));
+            _prevPinchDist = dist;
+            _dragging = false; // 팬 상태 리셋(손가락 떼고 한 손가락 전환 시 점프 방지)
+            return;
+        }
+        _prevPinchDist = -1f;
+        if (Input.touchCount == 1)
+        {
+            Vector2 pos = Input.GetTouch(0).position;
+            if (!_dragging) { _dragging = true; _lastDragPos = pos; return; }
+            PanByDelta(pos - _lastDragPos);
+            _lastDragPos = pos;
+        }
+        else { _dragging = false; }
 #endif
     }
 

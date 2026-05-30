@@ -183,6 +183,10 @@ public static class PocBuildPipeline
 
         var player = new GameObject("PlayerRoot");
         var avatar = player.AddComponent<PlayerAvatar>();
+        avatar.characterScale = 3.2f;
+        avatar.ringScale = 3.4f;
+        avatar.shadowScale = 2.6f;
+        avatar.idleFps = 8f;
         var idleTex = new Texture2D[PlayerIdlePaths.Length];
         int idleLoaded = 0;
         for (int i = 0; i < PlayerIdlePaths.Length; i++)
