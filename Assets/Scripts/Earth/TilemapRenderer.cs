@@ -27,6 +27,13 @@ public class TilemapRenderer : MonoBehaviour
     [SerializeField] private Texture2D bushTex;
     [SerializeField] private Texture2D stumpTex;
 
+    [Header("잔디 데코 (풀포기/꽃, 16x16 투명·하단앵커)")]
+    [SerializeField] private Texture2D tuftA;
+    [SerializeField] private Texture2D tuftB;
+    [SerializeField] private Texture2D tuftC;
+    [SerializeField] private Texture2D flowerWhite;
+    [SerializeField] private Texture2D flowerRed;
+
     [Header("렌더")]
     [SerializeField] private Camera mapCamera;
     [SerializeField, Range(0, 4)] private int paddingTiles = 2;
@@ -49,6 +56,10 @@ public class TilemapRenderer : MonoBehaviour
     private Sprite[] _grassSprites; // 변형 4종
     private Sprite[][] _autoSheets; // [(int)TileType][cornerIndex 0..15]
     private Sprite _treeA, _treeB, _bush, _stump; // 오브젝트(하단앵커)
+    private Sprite _tuftA, _tuftB, _tuftC, _flowerW, _flowerR; // 잔디 데코(하단앵커)
+
+    // 플레이어(GPS)의 화면 중심 대비 GUI 오프셋(px). PlayerAvatar 가 소비.
+    public Vector2 PlayerGuiOffset { get; private set; }
 
     private void Awake()
     {
@@ -81,6 +92,9 @@ public class TilemapRenderer : MonoBehaviour
         _treeB = MakeObjSprite(treePineB);
         _bush  = MakeObjSprite(bushTex);
         _stump = MakeObjSprite(stumpTex);
+
+        _tuftA = MakeObjSprite(tuftA); _tuftB = MakeObjSprite(tuftB); _tuftC = MakeObjSprite(tuftC);
+        _flowerW = MakeObjSprite(flowerWhite); _flowerR = MakeObjSprite(flowerRed);
     }
 
     // 오브젝트 스프라이트: 하단-중앙 pivot 으로 베이스가 지면에 닿도록.
@@ -172,6 +186,16 @@ public class TilemapRenderer : MonoBehaviour
     {
         if (mapCamera == null) return;
         var (centerTxF, centerTyF) = GeoTileGrid.LatLonToTileFractional(_centerLat, _centerLon);
+
+        // 플레이어(GPS)의 화면 중심 대비 GUI 오프셋(px). 추적 중이면 0(중앙).
+        {
+            var (gpsTxF, gpsTyF) = GeoTileGrid.LatLonToTileFractional(_gpsLat, _gpsLon);
+            float ppu2 = Screen.height / (2f * mapCamera.orthographicSize);
+            PlayerGuiOffset = new Vector2(
+                (float)((gpsTxF - centerTxF) * ppu2),   // 동쪽(+) = 화면 오른쪽(+x, GUI)
+                (float)((gpsTyF - centerTyF) * ppu2));   // 남쪽(ty 증가) = 화면 아래(+y, GUI)
+        }
+
         float halfH = mapCamera.orthographicSize;
         float halfW = halfH * mapCamera.aspect;
         int rangeX = Mathf.CeilToInt(halfW) + paddingTiles;
@@ -279,25 +303,26 @@ public class TilemapRenderer : MonoBehaviour
     {
         jx = 0f; jy = 0f;
         uint hh = TileHash(tx, ty);
-        TileType tt = TileTypeAt(tx, ty);
-        // 약간의 위치 흔들기 (-0.25 ~ +0.25 타일)
         jx = (((hh >> 4) & 0xFFu) / 255f - 0.5f) * 0.5f;
         jy = (((hh >> 12) & 0xFFu) / 255f - 0.5f) * 0.5f;
+        TileType tt = TileTypeAt(tx, ty);
         if (tt == TileType.Forest)
         {
-            if ((hh % 100u) < 70u)            // 약 70% forest 타일에 나무
-                return ((hh >> 1) & 1u) == 0u ? _treeA : _treeB;
-            return null;
+            // 거의 모든 forest 타일에 나무 → 빽빽한 숲
+            if ((hh % 100u) < 90u) return ((hh >> 1) & 1u) == 0u ? _treeA : _treeB;
+            return _bush; // 나머지는 덤불로 메움
         }
         if (tt == TileType.Grass)
         {
             uint r = hh % 100u;
-            if (r < 2u) return _bush;          // 2%
-            if (r < 3u) return _stump;         // 1%
-            if (r < 4u) return ((hh >> 1) & 1u) == 0u ? _treeA : _treeB; // 1% 단독 나무
+            if (r < 40u) { uint t = (hh >> 5) % 3u; return t == 0u ? _tuftA : (t == 1u ? _tuftB : _tuftC); } // 40% 풀포기
+            if (r < 52u) return ((hh >> 6) & 1u) == 0u ? _flowerW : _flowerR;  // 12% 꽃
+            if (r < 54u) return _bush;     // 2%
+            if (r < 55u) return _stump;    // 1%
+            if (r < 57u) return ((hh >> 1) & 1u) == 0u ? _treeA : _treeB; // 2% 단독 나무
             return null;
         }
-        return null; // path/road/water/building 위엔 오브젝트 없음
+        return null;
     }
 
     private SpriteRenderer AcquireObj()
@@ -319,32 +344,27 @@ public class TilemapRenderer : MonoBehaviour
     {
         if (mapCamera == null) return;
         Vector2 pos; bool active;
-        if (Input.touchCount > 0)
-        {
-            var tch = Input.GetTouch(0);
-            pos = tch.position;
-            active = tch.phase != TouchPhase.Ended && tch.phase != TouchPhase.Canceled;
-        }
-        else if (Input.GetMouseButton(0)) { pos = (Vector2)Input.mousePosition; active = true; }
+#if UNITY_EDITOR
+        if (Input.GetMouseButton(0)) { pos = (Vector2)Input.mousePosition; active = true; }
         else { _dragging = false; return; }
-
+#else
+        if (Input.touchCount == 2)
+        {
+            pos = (Input.GetTouch(0).position + Input.GetTouch(1).position) * 0.5f;
+            active = true;
+        }
+        else { _dragging = false; return; }
+#endif
         if (!active) { _dragging = false; return; }
         if (!_dragging) { _dragging = true; _lastDragPos = pos; return; }
-
         Vector2 delta = pos - _lastDragPos;
         _lastDragPos = pos;
         if (delta.sqrMagnitude < 0.25f) return;
-
-        float ppu = Screen.height / (2f * mapCamera.orthographicSize); // 픽셀/타일
-        double dTx = delta.x / ppu;
-        double dTy = delta.y / ppu;
-
+        float ppu = Screen.height / (2f * mapCamera.orthographicSize);
+        double dTx = delta.x / ppu, dTy = delta.y / ppu;
         _followGps = false;
         var (txf, tyf) = GeoTileGrid.LatLonToTileFractional(_centerLat, _centerLon);
-        // 손가락 오른쪽 드래그 → 지도 내용 오른쪽 이동 → 중심 왼쪽: txf 감소.
-        // 손가락 위로 드래그(스크린 +y) → 내용 위로 → 중심 남쪽(ty 증가).
-        txf -= dTx;
-        tyf += dTy;
+        txf -= dTx; tyf += dTy;
         var (la, lo) = GeoTileGrid.TileFractionalToLatLon(txf, tyf);
         _centerLat = la; _centerLon = lo;
         Refresh();

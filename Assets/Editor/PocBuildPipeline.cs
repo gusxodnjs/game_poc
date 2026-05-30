@@ -63,6 +63,11 @@ public static class PocBuildPipeline
         ObjectsDir + "/tree_pine_b_48x64.png",
         ObjectsDir + "/bush_32x32.png",
         ObjectsDir + "/stump_32x32.png",
+        ObjectsDir + "/tuft_grass_a_16x16.png",
+        ObjectsDir + "/tuft_grass_b_16x16.png",
+        ObjectsDir + "/tuft_grass_c_16x16.png",
+        ObjectsDir + "/flower_white_16x16.png",
+        ObjectsDir + "/flower_red_16x16.png",
     };
 
     private static void EnsureTilesetTextureSettings()
@@ -139,6 +144,11 @@ public static class PocBuildPipeline
         tmSo.FindProperty("treePineB").objectReferenceValue = AssetDatabase.LoadAssetAtPath<Texture2D>(ObjectsDir + "/tree_pine_b_48x64.png");
         tmSo.FindProperty("bushTex").objectReferenceValue   = AssetDatabase.LoadAssetAtPath<Texture2D>(ObjectsDir + "/bush_32x32.png");
         tmSo.FindProperty("stumpTex").objectReferenceValue  = AssetDatabase.LoadAssetAtPath<Texture2D>(ObjectsDir + "/stump_32x32.png");
+        tmSo.FindProperty("tuftA").objectReferenceValue       = AssetDatabase.LoadAssetAtPath<Texture2D>(ObjectsDir + "/tuft_grass_a_16x16.png");
+        tmSo.FindProperty("tuftB").objectReferenceValue       = AssetDatabase.LoadAssetAtPath<Texture2D>(ObjectsDir + "/tuft_grass_b_16x16.png");
+        tmSo.FindProperty("tuftC").objectReferenceValue       = AssetDatabase.LoadAssetAtPath<Texture2D>(ObjectsDir + "/tuft_grass_c_16x16.png");
+        tmSo.FindProperty("flowerWhite").objectReferenceValue = AssetDatabase.LoadAssetAtPath<Texture2D>(ObjectsDir + "/flower_white_16x16.png");
+        tmSo.FindProperty("flowerRed").objectReferenceValue   = AssetDatabase.LoadAssetAtPath<Texture2D>(ObjectsDir + "/flower_red_16x16.png");
         tmSo.ApplyModifiedPropertiesWithoutUndo();
         int tilesetLoaded = 0;
         foreach (var path in TilesetPaths)
@@ -187,6 +197,11 @@ public static class PocBuildPipeline
         Debug.Log("[POC] PlayerAvatar wired: idle=" + idleLoaded + "/" + PlayerIdlePaths.Length +
                   ", ring=" + (avatar.accuracyRingTex != null) +
                   ", shadow=" + (avatar.shadowTex != null));
+
+        // 아바타 → 지도(GPS 오프셋) 참조 연결: 패닝 시 캐릭터가 실제 위치에 고정되도록.
+        var avSo = new SerializedObject(avatar);
+        var avTmProp = avSo.FindProperty("tilemap");
+        if (avTmProp != null) { avTmProp.objectReferenceValue = tilemap; avSo.ApplyModifiedPropertiesWithoutUndo(); }
 
         EditorSceneManager.SaveScene(scene, ScenePath);
 

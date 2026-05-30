@@ -36,6 +36,10 @@ public class PlayerAvatar : MonoBehaviour
     [Tooltip("그림자 스케일")]
     public float shadowScale = 2.0f;
 
+    [Header("지도 연동")]
+    [Tooltip("패닝 시 아바타를 GPS 실제 위치에 고정하기 위한 화면 오프셋 소스")]
+    [SerializeField] private TilemapRenderer tilemap;
+
     private float _startTime;
 
     private void Start()
@@ -51,6 +55,7 @@ public class PlayerAvatar : MonoBehaviour
 
         float cx = Screen.width * 0.5f;
         float cy = Screen.height * 0.5f;
+        if (tilemap != null) { var o = tilemap.PlayerGuiOffset; cx += o.x; cy += o.y; }
 
         // 1) accuracy ring — sin 파형 펄스로 alpha 0.4 ~ 0.8 왕복
         if (accuracyRingTex != null)
