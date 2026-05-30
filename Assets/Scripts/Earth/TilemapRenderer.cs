@@ -305,6 +305,18 @@ public class TilemapRenderer : MonoBehaviour
         var sr = go.AddComponent<SpriteRenderer>(); sr.sortingOrder = 1; return sr;
     }
 
+    // (tx,ty) 주변 반경 r 안에 타입 t 가 하나라도 있나.
+    private bool NearType(long tx, long ty, TileType t, int r)
+    {
+        for (int dy = -r; dy <= r; dy++)
+            for (int dx = -r; dx <= r; dx++)
+            {
+                if (dx == 0 && dy == 0) continue;
+                if (TileTypeAt(tx + dx, ty + dy) == t) return true;
+            }
+        return false;
+    }
+
     // 타일에 놓을 오브젝트 결정(결정론적 hash). forest=나무 밀도 높음, grass=드물게 덤불/그루터기.
     private Sprite PickObject(long tx, long ty, out float jx, out float jy)
     {
@@ -330,11 +342,17 @@ public class TilemapRenderer : MonoBehaviour
         if (tt == TileType.Grass)
         {
             uint r = hh % 100u;
-            if (r < 40u) { uint t = (hh >> 5) % 3u; return t == 0u ? _tuftA : (t == 1u ? _tuftB : _tuftC); } // 40% 풀포기
-            if (r < 52u) return ((hh >> 6) & 1u) == 0u ? _flowerW : _flowerR;  // 12% 꽃
-            if (r < 54u) return _bush;     // 2%
-            if (r < 55u) return _stump;    // 1%
-            if (r < 57u) return ((hh >> 1) & 1u) == 0u ? _treeA : _treeB; // 2% 단독 나무
+            // 숲 가장자리: 숲에 인접한 잔디 → 나무로 자연스러운 군락 falloff(숲이 잔디로 번짐)
+            if (NearType(tx, ty, TileType.Forest, 1) && r < 55u)
+                return ((hh >> 1) & 1u) == 0u ? _treeA : _treeB;
+            // 길/도로 옆 가로수 라인(구도 프레이밍)
+            if ((NearType(tx, ty, TileType.Road, 1) || NearType(tx, ty, TileType.Path, 1)) && r < 22u)
+                return ((hh >> 1) & 1u) == 0u ? _treeA : _treeB;
+            // 그 외 빈 잔디: 풀포기/꽃/덤불/그루터기
+            if (r < 40u) { uint t = (hh >> 5) % 3u; return t == 0u ? _tuftA : (t == 1u ? _tuftB : _tuftC); }
+            if (r < 52u) return ((hh >> 6) & 1u) == 0u ? _flowerW : _flowerR;
+            if (r < 54u) return _bush;
+            if (r < 55u) return _stump;
             return null;
         }
         return null;
