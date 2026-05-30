@@ -41,6 +41,30 @@ public static class PocBuildPipeline
     private const string PlayerRingPath = "Assets/characters/player_accuracy_ring_64x64.png";
     private const string PlayerShadowPath = "Assets/characters/player_shadow_32x16.png";
 
+    // Earth 타일셋 (TilemapRenderer 의 grass/path/water/forest 슬롯에 주입)
+    private const string TilesetDir = "Assets/world/tiles";
+    private static readonly string[] TilesetPaths = {
+        TilesetDir + "/grass_32.png",
+        TilesetDir + "/path_32.png",
+        TilesetDir + "/water_32.png",
+        TilesetDir + "/forest_32.png",
+    };
+
+    private static void EnsureTilesetTextureSettings()
+    {
+        foreach (var path in TilesetPaths)
+        {
+            var importer = AssetImporter.GetAtPath(path) as TextureImporter;
+            if (importer == null) continue;
+            importer.textureType = TextureImporterType.Sprite;
+            importer.filterMode = FilterMode.Point;
+            importer.mipmapEnabled = false;
+            importer.alphaIsTransparency = true;
+            importer.spritePixelsPerUnit = 32;
+            importer.SaveAndReimport();
+        }
+    }
+
     private const string BundleId = "com.gusxodnjs.terrapoc";
     private const string BuildOutput = "build/ios";
 
@@ -51,39 +75,46 @@ public static class PocBuildPipeline
 
         var scene = EditorSceneManager.NewScene(NewSceneSetup.DefaultGameObjects, NewSceneMode.Single);
 
-        // 카메라: MapView 가 SpriteRenderer 기반이므로 Orthographic 필수.
-        // ortho size = 1.5 → 화면 높이 3 unit ≈ 3 타일 (zoom 17 기준 약 ±200m 가시영역)
+        // 카메라: TilemapRenderer 가 SpriteRenderer 기반 → Orthographic.
         var cam = Camera.main;
         if (cam != null)
         {
             cam.orthographic = true;
-            cam.orthographicSize = 1.5f;
+            cam.orthographicSize = 4.5f; // ≈27m 가시 (Pikmin 줌)
             cam.transform.position = new Vector3(0f, 0f, -10f);
             cam.clearFlags = CameraClearFlags.SolidColor;
-            cam.backgroundColor = new Color32(0x08, 0x0d, 0x1f, 0xff);
+            cam.backgroundColor = new Color32(0x2e, 0x7d, 0x32, 0xff); // 풀밭 톤 placeholder
             cam.nearClipPlane = 0.1f;
             cam.farClipPlane = 100f;
         }
 
+        EnsureTilesetTextureSettings();
+
         var map = new GameObject("MapRoot");
-        var mapView = map.AddComponent<MapView>();
+        var tilemap = map.AddComponent<TilemapRenderer>();
+        var tmSo = new SerializedObject(tilemap);
+        tmSo.FindProperty("grassTex").objectReferenceValue  = AssetDatabase.LoadAssetAtPath<Texture2D>(TilesetDir + "/grass_32.png");
+        tmSo.FindProperty("pathTex").objectReferenceValue   = AssetDatabase.LoadAssetAtPath<Texture2D>(TilesetDir + "/path_32.png");
+        tmSo.FindProperty("waterTex").objectReferenceValue  = AssetDatabase.LoadAssetAtPath<Texture2D>(TilesetDir + "/water_32.png");
+        tmSo.FindProperty("forestTex").objectReferenceValue = AssetDatabase.LoadAssetAtPath<Texture2D>(TilesetDir + "/forest_32.png");
+        tmSo.ApplyModifiedPropertiesWithoutUndo();
+        int tilesetLoaded = 0;
+        foreach (var path in TilesetPaths)
+            if (AssetDatabase.LoadAssetAtPath<Texture2D>(path) != null) tilesetLoaded++;
+        Debug.Log("[POC] TilemapRenderer wired: tileset=" + tilesetLoaded + "/4");
 
         var gps = new GameObject("GpsRoot");
         var gpsCheck = gps.AddComponent<GpsCheck>();
-
-        // GpsCheck.mapView SerializeField 에 MapView 참조 직접 주입.
-        // 이 와이어링이 빠지면 GPS 갱신이 MapView.SetCenter 를 호출하지 못해
-        // 지도가 서울시청(initialLat/Lon) 고정으로 보임.
         var so = new SerializedObject(gpsCheck);
-        var prop = so.FindProperty("mapView");
+        var prop = so.FindProperty("tilemap"); // 필드명 mapView→tilemap 로 변경됨
         if (prop != null)
         {
-            prop.objectReferenceValue = mapView;
+            prop.objectReferenceValue = tilemap;
             so.ApplyModifiedPropertiesWithoutUndo();
         }
         else
         {
-            Debug.LogWarning("[POC] GpsCheck.mapView SerializedProperty not found — GPS→MapView wiring skipped.");
+            Debug.LogWarning("[POC] GpsCheck.tilemap SerializedProperty not found — GPS→Tilemap wiring skipped.");
         }
 
         var discovery = new GameObject("DiscoveryRoot");
