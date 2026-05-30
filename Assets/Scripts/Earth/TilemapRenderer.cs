@@ -26,6 +26,11 @@ public class TilemapRenderer : MonoBehaviour
     [SerializeField, Range(0, 4)] private int paddingTiles = 2;
 
     private double _centerLat, _centerLon;
+    private double _gpsLat, _gpsLon;     // 마지막 GPS 위치(리센터용)
+    private bool _followGps = true;       // true=플레이어 추적, false=자유 둘러보기(드래그)
+    private bool _dragging = false;
+    private Vector2 _lastDragPos;
+    private GUIStyle _btnStyle;
     private Transform _root;
 
     private readonly Dictionary<(long, long), SpriteRenderer> _baseActive = new();
@@ -48,6 +53,7 @@ public class TilemapRenderer : MonoBehaviour
         rootGo.transform.SetParent(transform, false);
         _root = rootGo.transform;
         _centerLat = initialLat; _centerLon = initialLon;
+        _gpsLat = initialLat; _gpsLon = initialLon;
         BuildSprites();
     }
 
@@ -91,8 +97,9 @@ public class TilemapRenderer : MonoBehaviour
     public void SetCenter(double lat, double lon)
     {
         if (System.Math.Abs(lat) < 0.001 && System.Math.Abs(lon) < 0.001) return;
-        _centerLat = lat; _centerLon = lon;
-        Refresh();
+        _gpsLat = lat; _gpsLon = lon;
+        if (_followGps) { _centerLat = lat; _centerLon = lon; Refresh(); }
+        // 자유 둘러보기 중이면 화면 중심은 그대로 두고 GPS만 기록.
     }
 
     private void Start() => Refresh();
@@ -224,5 +231,65 @@ public class TilemapRenderer : MonoBehaviour
     }
 
     private float _t;
-    private void Update() { _t += Time.deltaTime; if (_t >= 1f) { _t = 0f; Refresh(); } }
+    private void Update()
+    {
+        HandleDrag();
+        _t += Time.deltaTime;
+        if (_t >= 1f) { _t = 0f; Refresh(); }
+    }
+
+    private void HandleDrag()
+    {
+        if (mapCamera == null) return;
+        Vector2 pos; bool active;
+        if (Input.touchCount > 0)
+        {
+            var tch = Input.GetTouch(0);
+            pos = tch.position;
+            active = tch.phase != TouchPhase.Ended && tch.phase != TouchPhase.Canceled;
+        }
+        else if (Input.GetMouseButton(0)) { pos = (Vector2)Input.mousePosition; active = true; }
+        else { _dragging = false; return; }
+
+        if (!active) { _dragging = false; return; }
+        if (!_dragging) { _dragging = true; _lastDragPos = pos; return; }
+
+        Vector2 delta = pos - _lastDragPos;
+        _lastDragPos = pos;
+        if (delta.sqrMagnitude < 0.25f) return;
+
+        float ppu = Screen.height / (2f * mapCamera.orthographicSize); // 픽셀/타일
+        double dTx = delta.x / ppu;
+        double dTy = delta.y / ppu;
+
+        _followGps = false;
+        var (txf, tyf) = GeoTileGrid.LatLonToTileFractional(_centerLat, _centerLon);
+        // 손가락 오른쪽 드래그 → 지도 내용 오른쪽 이동 → 중심 왼쪽: txf 감소.
+        // 손가락 위로 드래그(스크린 +y) → 내용 위로 → 중심 남쪽(ty 증가).
+        txf -= dTx;
+        tyf += dTy;
+        var (la, lo) = GeoTileGrid.TileFractionalToLatLon(txf, tyf);
+        _centerLat = la; _centerLon = lo;
+        Refresh();
+    }
+
+    private void OnGUI()
+    {
+        if (_followGps) return;
+        if (_btnStyle == null)
+        {
+            _btnStyle = new GUIStyle(GUI.skin.button) { fontSize = Mathf.Max(16, Screen.height / 40) };
+        }
+        float w = Screen.width * 0.30f, h = Screen.height * 0.07f;
+        Rect safe = Screen.safeArea;
+        float bx = safe.x + safe.width - w - 16f;
+        float by = Screen.height - (safe.y) - h - 16f; // 우하단 safe
+        if (GUI.Button(new Rect(bx, by, w, h), "내 위치", _btnStyle))
+        {
+            _followGps = true;
+            _centerLat = _gpsLat; _centerLon = _gpsLon;
+            _dragging = false;
+            Refresh();
+        }
+    }
 }

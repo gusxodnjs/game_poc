@@ -28,7 +28,7 @@ public class ChunkCache : MonoBehaviour
 
     private void Awake()
     {
-        _dir = Path.Combine(Application.persistentDataPath, "earthtiles");
+        _dir = Path.Combine(Application.persistentDataPath, "earthtiles_v2");
         Directory.CreateDirectory(_dir);
     }
 

@@ -59,8 +59,8 @@ public static class OverpassParser
         type = TileType.Grass; geom = OsmGeom.Polyline; buffer = 0;
         if (tags.TryGetValue("highway", out var hwObj) && hwObj is string hw)
         {
-            if (RoadHighways.Contains(hw)) { type = TileType.Road; geom = OsmGeom.Polyline; buffer = BigRoads.Contains(hw) ? 2 : 1; return true; }
-            type = TileType.Path; geom = OsmGeom.Polyline; buffer = 1; return true;
+            if (RoadHighways.Contains(hw)) { type = TileType.Road; geom = OsmGeom.Polyline; buffer = BigRoads.Contains(hw) ? 1 : 0; return true; }
+            type = TileType.Path; geom = OsmGeom.Polyline; buffer = 0; return true;
         }
         if (tags.ContainsKey("building")) { type = TileType.Building; geom = OsmGeom.Polygon; buffer = 0; return true; }
         if (Has(tags, "waterway", "river") || Has(tags, "waterway", "stream"))

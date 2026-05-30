@@ -42,6 +42,17 @@ public static class GeoTileGrid
         return (txf, tyf);
     }
 
+    /// <summary>전역 타일 좌표(소수) → 위경도. LatLonToTileFractional 의 역.</summary>
+    public static (double lat, double lon) TileFractionalToLatLon(double txf, double tyf)
+    {
+        double mx = txf * TileMeters - OriginShift;
+        double my = OriginShift - tyf * TileMeters;
+        double lon = mx / OriginShift * 180.0;
+        double lat = my / OriginShift * 180.0;
+        lat = 180.0 / Math.PI * (2.0 * Math.Atan(Math.Exp(lat * Math.PI / 180.0)) - Math.PI / 2.0);
+        return (lat, lon);
+    }
+
     /// <summary>타일 좌표 → 청크 좌표. 음수도 floor 방향으로 내림.</summary>
     public static (long cx, long cy) TileToChunk(long tx, long ty)
         => (FloorDiv(tx, ChunkTiles), FloorDiv(ty, ChunkTiles));
