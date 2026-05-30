@@ -57,8 +57,9 @@ SHEET = 128
 FEATURES = [
     (
         "path",
-        "flat top-down pixel art tile of plain tan dirt path ground, dry packed "
-        "earth, subtle small pebbles, uniform flat lighting, no outline, no "
+        "flat top-down pixel art tile of light gray stone flagstone paving path, "
+        "fitted cut stone blocks, subtle slightly darker grout lines between "
+        "stones, weathered cobblestone, uniform flat lighting, no outline, no "
         "shadow, no elevation, no cliff, seamless tileable texture",
     ),
     (
@@ -258,6 +259,15 @@ def montage(sheet: Image.Image, feature_name: str) -> Image.Image:
 
 
 def main() -> int:
+    # Optional filter: `--only path[,road,...]` regenerates ONLY those feature
+    # sheets and leaves every other *_auto_128.png untouched.
+    only = None
+    for arg in sys.argv[1:]:
+        if arg.startswith("--only="):
+            only = {s.strip() for s in arg.split("=", 1)[1].split(",") if s.strip()}
+        elif arg == "--only" and sys.argv.index(arg) + 1 < len(sys.argv):
+            only = {s.strip() for s in sys.argv[sys.argv.index(arg) + 1].split(",") if s.strip()}
+
     api_key = load_api_key()
     grass = Image.open(GRASS_BASE).convert("RGBA")
     if grass.size != (TILE, TILE):
@@ -265,6 +275,8 @@ def main() -> int:
 
     results = {"features": []}
     for name, prompt in FEATURES:
+        if only is not None and name not in only:
+            continue
         print(f"[{name}] generating flat feature texture...", flush=True)
         raw = None
         last_err = None
