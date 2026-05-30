@@ -43,6 +43,7 @@ public class TilemapRenderer : MonoBehaviour
     private bool _followGps = true;       // true=플레이어 추적, false=자유 둘러보기(드래그)
     private bool _dragging = false;
     private Vector2 _lastDragPos;
+    private float _prevPinchDist = -1f;
     private GUIStyle _btnStyle;
     private Transform _root;
 
@@ -343,22 +344,33 @@ public class TilemapRenderer : MonoBehaviour
     private void HandleDrag()
     {
         if (mapCamera == null) return;
-        Vector2 pos; bool active;
 #if UNITY_EDITOR
-        if (Input.GetMouseButton(0)) { pos = (Vector2)Input.mousePosition; active = true; }
-        else { _dragging = false; return; }
-#else
-        if (Input.touchCount == 2)
-        {
-            pos = (Input.GetTouch(0).position + Input.GetTouch(1).position) * 0.5f;
-            active = true;
-        }
-        else { _dragging = false; return; }
-#endif
-        if (!active) { _dragging = false; return; }
+        float scroll = Input.mouseScrollDelta.y;
+        if (Mathf.Abs(scroll) > 0.01f) SetZoom(mapCamera.orthographicSize * (1f - scroll * 0.1f));
+        if (!Input.GetMouseButton(0)) { _dragging = false; return; }
+        Vector2 pos = (Vector2)Input.mousePosition;
         if (!_dragging) { _dragging = true; _lastDragPos = pos; return; }
-        Vector2 delta = pos - _lastDragPos;
+        PanByDelta(pos - _lastDragPos);
         _lastDragPos = pos;
+#else
+        if (Input.touchCount != 2) { _dragging = false; _prevPinchDist = -1f; return; }
+        var t0 = Input.GetTouch(0); var t1 = Input.GetTouch(1);
+        float dist = Vector2.Distance(t0.position, t1.position);
+        Vector2 pos = (t0.position + t1.position) * 0.5f;
+        if (!_dragging) { _dragging = true; _lastDragPos = pos; _prevPinchDist = dist; return; }
+        // 핀치 줌: 손가락 사이 거리가 멀어지면 zoom in(orthoSize 감소)
+        if (_prevPinchDist > 1f && Mathf.Abs(dist - _prevPinchDist) > 1f)
+            SetZoom(mapCamera.orthographicSize * (_prevPinchDist / Mathf.Max(1f, dist)));
+        _prevPinchDist = dist;
+        // 팬: 두 손가락 중점 이동
+        PanByDelta(pos - _lastDragPos);
+        _lastDragPos = pos;
+#endif
+    }
+
+    // 화면 픽셀 delta 만큼 지도 중심 이동(자유 둘러보기). 기존 팬 수식 추출.
+    private void PanByDelta(Vector2 delta)
+    {
         if (delta.sqrMagnitude < 0.25f) return;
         float ppu = Screen.height / (2f * mapCamera.orthographicSize);
         double dTx = delta.x / ppu, dTy = delta.y / ppu;
@@ -367,6 +379,14 @@ public class TilemapRenderer : MonoBehaviour
         txf -= dTx; tyf += dTy;
         var (la, lo) = GeoTileGrid.TileFractionalToLatLon(txf, tyf);
         _centerLat = la; _centerLon = lo;
+        Refresh();
+    }
+
+    private void SetZoom(float ortho)
+    {
+        float c = Mathf.Clamp(ortho, 2.5f, 9f);
+        if (Mathf.Approximately(c, mapCamera.orthographicSize)) return;
+        mapCamera.orthographicSize = c;
         Refresh();
     }
 
