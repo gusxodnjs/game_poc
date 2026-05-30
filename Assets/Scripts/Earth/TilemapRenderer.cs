@@ -21,6 +21,12 @@ public class TilemapRenderer : MonoBehaviour
     [SerializeField] private Texture2D forestSheet;
     [SerializeField] private Texture2D buildingSheet;
 
+    [Header("오브젝트 (나무/덤불/그루터기, 투명·하단앵커)")]
+    [SerializeField] private Texture2D treePineA;
+    [SerializeField] private Texture2D treePineB;
+    [SerializeField] private Texture2D bushTex;
+    [SerializeField] private Texture2D stumpTex;
+
     [Header("렌더")]
     [SerializeField] private Camera mapCamera;
     [SerializeField, Range(0, 4)] private int paddingTiles = 2;
@@ -37,9 +43,12 @@ public class TilemapRenderer : MonoBehaviour
     private readonly Stack<SpriteRenderer> _basePool = new();
     private readonly Dictionary<(long, long), SpriteRenderer> _ovActive = new();
     private readonly Stack<SpriteRenderer> _ovPool = new();
+    private readonly Dictionary<(long, long), SpriteRenderer> _objActive = new();
+    private readonly Stack<SpriteRenderer> _objPool = new();
 
     private Sprite[] _grassSprites; // 변형 4종
     private Sprite[][] _autoSheets; // [(int)TileType][cornerIndex 0..15]
+    private Sprite _treeA, _treeB, _bush, _stump; // 오브젝트(하단앵커)
 
     private void Awake()
     {
@@ -67,6 +76,20 @@ public class TilemapRenderer : MonoBehaviour
         _autoSheets[(int)TileType.Water]    = SliceSheet(waterSheet);
         _autoSheets[(int)TileType.Forest]   = SliceSheet(forestSheet);
         _autoSheets[(int)TileType.Building] = SliceSheet(buildingSheet);
+
+        _treeA = MakeObjSprite(treePineA);
+        _treeB = MakeObjSprite(treePineB);
+        _bush  = MakeObjSprite(bushTex);
+        _stump = MakeObjSprite(stumpTex);
+    }
+
+    // 오브젝트 스프라이트: 하단-중앙 pivot 으로 베이스가 지면에 닿도록.
+    private Sprite MakeObjSprite(Texture2D t)
+    {
+        if (t == null) return null;
+        t.filterMode = FilterMode.Point;
+        return Sprite.Create(t, new Rect(0, 0, t.width, t.height),
+            new Vector2(0.5f, 0f), pixelsPerUnit: 32, extrude: 0, meshType: SpriteMeshType.FullRect); // pivot bottom-center
     }
 
     private Sprite MakeSprite(Texture2D t)
@@ -201,6 +224,27 @@ public class TilemapRenderer : MonoBehaviour
             }
         ReleaseUnneeded(_ovActive, ovNeeded, _ovPool);
 
+        // ---- 오브젝트 산포(나무/덤불/그루터기), Y-sort ----
+        var objNeeded = new HashSet<(long, long)>();
+        for (int dy = -rangeY; dy <= rangeY + 2; dy++) // 위쪽 여유: 캐노피가 위 타일까지 침범
+            for (int dx = -rangeX; dx <= rangeX; dx++)
+            {
+                long tx = centerTx + dx, ty = centerTy + dy;
+                Sprite obj = PickObject(tx, ty, out float jx, out float jy);
+                if (obj == null) continue;
+                objNeeded.Add((tx, ty));
+                if (!_objActive.TryGetValue((tx, ty), out var sr)) { sr = AcquireObj(); _objActive[(tx, ty)] = sr; }
+                float wx = (float)(tx + 0.5 - centerTxF) + jx;
+                float wy = (float)-(ty + 0.5 - centerTyF) + jy;
+                sr.transform.localPosition = new Vector3(wx, wy, 0f);
+                sr.sprite = obj;
+                uint hh = TileHash(tx, ty);
+                sr.flipX = ((hh >> 16) & 1u) == 1u;
+                // Y-sort: 화면 아래(낮은 wy)일수록 앞(높은 order). 지형(0~5) 위로 띄움.
+                sr.sortingOrder = 100 + Mathf.RoundToInt((50f - wy) * 8f);
+            }
+        ReleaseUnneeded(_objActive, objNeeded, _objPool);
+
         var (ccx, ccy) = GeoTileGrid.TileToChunk(centerTx, centerTy);
         ChunkCache.Instance.TrimFar(ccx, ccy, 2);
     }
@@ -228,6 +272,39 @@ public class TilemapRenderer : MonoBehaviour
         if (_ovPool.Count > 0) { var s = _ovPool.Pop(); s.gameObject.SetActive(true); return s; }
         var go = new GameObject("ETileOverlay"); go.transform.SetParent(_root, false);
         var sr = go.AddComponent<SpriteRenderer>(); sr.sortingOrder = 1; return sr;
+    }
+
+    // 타일에 놓을 오브젝트 결정(결정론적 hash). forest=나무 밀도 높음, grass=드물게 덤불/그루터기.
+    private Sprite PickObject(long tx, long ty, out float jx, out float jy)
+    {
+        jx = 0f; jy = 0f;
+        uint hh = TileHash(tx, ty);
+        TileType tt = TileTypeAt(tx, ty);
+        // 약간의 위치 흔들기 (-0.25 ~ +0.25 타일)
+        jx = (((hh >> 4) & 0xFFu) / 255f - 0.5f) * 0.5f;
+        jy = (((hh >> 12) & 0xFFu) / 255f - 0.5f) * 0.5f;
+        if (tt == TileType.Forest)
+        {
+            if ((hh % 100u) < 70u)            // 약 70% forest 타일에 나무
+                return ((hh >> 1) & 1u) == 0u ? _treeA : _treeB;
+            return null;
+        }
+        if (tt == TileType.Grass)
+        {
+            uint r = hh % 100u;
+            if (r < 2u) return _bush;          // 2%
+            if (r < 3u) return _stump;         // 1%
+            if (r < 4u) return ((hh >> 1) & 1u) == 0u ? _treeA : _treeB; // 1% 단독 나무
+            return null;
+        }
+        return null; // path/road/water/building 위엔 오브젝트 없음
+    }
+
+    private SpriteRenderer AcquireObj()
+    {
+        if (_objPool.Count > 0) { var s = _objPool.Pop(); s.gameObject.SetActive(true); return s; }
+        var go = new GameObject("EObj"); go.transform.SetParent(_root, false);
+        var sr = go.AddComponent<SpriteRenderer>(); sr.sortingOrder = 100; return sr;
     }
 
     private float _t;

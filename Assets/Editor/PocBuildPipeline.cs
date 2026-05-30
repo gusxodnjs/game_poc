@@ -56,9 +56,33 @@ public static class PocBuildPipeline
         TilesetDir + "/building_auto_128.png",
     };
 
+    // Earth 오브젝트(나무/덤불/그루터기) — TilemapRenderer 의 object 슬롯에 주입. 투명·하단앵커.
+    private const string ObjectsDir = "Assets/world/objects";
+    private static readonly string[] ObjectPaths = {
+        ObjectsDir + "/tree_pine_a_48x64.png",
+        ObjectsDir + "/tree_pine_b_48x64.png",
+        ObjectsDir + "/bush_32x32.png",
+        ObjectsDir + "/stump_32x32.png",
+    };
+
     private static void EnsureTilesetTextureSettings()
     {
         foreach (var path in TilesetPaths)
+        {
+            var importer = AssetImporter.GetAtPath(path) as TextureImporter;
+            if (importer == null) continue;
+            importer.textureType = TextureImporterType.Sprite;
+            importer.filterMode = FilterMode.Point;
+            importer.mipmapEnabled = false;
+            importer.alphaIsTransparency = true;
+            importer.spritePixelsPerUnit = 32;
+            importer.SaveAndReimport();
+        }
+    }
+
+    private static void EnsureObjectTextureSettings()
+    {
+        foreach (var path in ObjectPaths)
         {
             var importer = AssetImporter.GetAtPath(path) as TextureImporter;
             if (importer == null) continue;
@@ -95,6 +119,7 @@ public static class PocBuildPipeline
         }
 
         EnsureTilesetTextureSettings();
+        EnsureObjectTextureSettings();
 
         var map = new GameObject("MapRoot");
         var tilemap = map.AddComponent<TilemapRenderer>();
@@ -110,11 +135,19 @@ public static class PocBuildPipeline
         tmSo.FindProperty("waterSheet").objectReferenceValue    = AssetDatabase.LoadAssetAtPath<Texture2D>(TilesetDir + "/water_auto_128.png");
         tmSo.FindProperty("forestSheet").objectReferenceValue   = AssetDatabase.LoadAssetAtPath<Texture2D>(TilesetDir + "/forest_auto_128.png");
         tmSo.FindProperty("buildingSheet").objectReferenceValue = AssetDatabase.LoadAssetAtPath<Texture2D>(TilesetDir + "/building_auto_128.png");
+        tmSo.FindProperty("treePineA").objectReferenceValue = AssetDatabase.LoadAssetAtPath<Texture2D>(ObjectsDir + "/tree_pine_a_48x64.png");
+        tmSo.FindProperty("treePineB").objectReferenceValue = AssetDatabase.LoadAssetAtPath<Texture2D>(ObjectsDir + "/tree_pine_b_48x64.png");
+        tmSo.FindProperty("bushTex").objectReferenceValue   = AssetDatabase.LoadAssetAtPath<Texture2D>(ObjectsDir + "/bush_32x32.png");
+        tmSo.FindProperty("stumpTex").objectReferenceValue  = AssetDatabase.LoadAssetAtPath<Texture2D>(ObjectsDir + "/stump_32x32.png");
         tmSo.ApplyModifiedPropertiesWithoutUndo();
         int tilesetLoaded = 0;
         foreach (var path in TilesetPaths)
             if (AssetDatabase.LoadAssetAtPath<Texture2D>(path) != null) tilesetLoaded++;
         Debug.Log("[POC] TilemapRenderer wired: tileset=" + tilesetLoaded + "/9");
+        int objectsLoaded = 0;
+        foreach (var path in ObjectPaths)
+            if (AssetDatabase.LoadAssetAtPath<Texture2D>(path) != null) objectsLoaded++;
+        Debug.Log("[POC] objects wired: " + objectsLoaded + "/4");
 
         var gps = new GameObject("GpsRoot");
         var gpsCheck = gps.AddComponent<GpsCheck>();
