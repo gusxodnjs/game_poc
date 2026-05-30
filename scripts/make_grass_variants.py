@@ -123,26 +123,40 @@ def apply_variant(grid, idx):
              clamp(BASE[2] + 16 + hue[2]))
     dark = (clamp(BASE[0] - 20), clamp(BASE[1] - 16), clamp(BASE[2] - 12))
 
-    n_blades = [10, 14, 8, 12][idx]
+    # Density raised (was [10,14,8,12]) to add subtle field "life": more grass-
+    # blade specks. Kept as single/short specks at LOW contrast so overall
+    # contrast does NOT climb back up — blades are light/dark nudges near BASE,
+    # not bright pixels. All placement happens BEFORE the roll+heal, so seams
+    # stay matched.
+    n_blades = [26, 32, 22, 30][idx]
     for _ in range(n_blades):
         x = rng.randrange(SIZE)
         y = rng.randrange(SIZE)
-        g[y][x] = light
-        if rng.random() < 0.5:
+        # mix the blade toward light rather than slamming pure light -> keeps
+        # contrast modest while still reading as texture.
+        r0, g0, b0 = g[y][x]
+        g[y][x] = (clamp(light[0] * .8 + r0 * .2),
+                   clamp(light[1] * .8 + g0 * .2),
+                   clamp(light[2] * .8 + b0 * .2))
+        if rng.random() < 0.55:
             yy = (y - 1) % SIZE
             r0, g0, b0 = g[yy][x]
-            g[yy][x] = (clamp(light[0] * .65 + r0 * .35),
-                        clamp(light[1] * .65 + g0 * .35),
-                        clamp(light[2] * .65 + b0 * .35))
-        if rng.random() < 0.4:
+            g[yy][x] = (clamp(light[0] * .6 + r0 * .4),
+                        clamp(light[1] * .6 + g0 * .4),
+                        clamp(light[2] * .6 + b0 * .4))
+        if rng.random() < 0.45:
             xx = (x + 1) % SIZE
             r0, g0, b0 = g[y][xx]
             g[y][xx] = (clamp(dark[0] * .5 + r0 * .5),
                         clamp(dark[1] * .5 + g0 * .5),
                         clamp(dark[2] * .5 + b0 * .5))
 
-    flowers = [[], [(8, 9)], [(20, 6), (5, 22)], [(14, 18)]][idx]
-    fcol = [None, (232, 226, 122), (235, 235, 235), (224, 182, 218)][idx]
+    # A few more tiny flowers per variant (was 0-2) for subtle life.
+    flowers = [[(11, 25)],
+               [(8, 9), (24, 20)],
+               [(20, 6), (5, 22), (27, 27)],
+               [(14, 18), (3, 7)]][idx]
+    fcol = [(228, 200, 96), (232, 226, 122), (235, 235, 235), (224, 182, 218)][idx]
     for (fx, fy) in flowers:
         g[fy % SIZE][fx % SIZE] = fcol
         xx = (fx + 1) % SIZE

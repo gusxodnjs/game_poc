@@ -28,12 +28,18 @@ OUT_DIR = "Assets/world/tiles"
 TMP = "/tmp/ts"
 
 # name -> tileset id
+# road + forest re-tuned for #52 (deploy feedback):
+#   road  6c5b98bf… smooth flat gray asphalt + faint dashed lane line (was gray
+#         cobble/brick 231401df…)
+#   forest 427544b7… darker richer canopy w/ defined treetops, higher contrast
+#         vs grass (was 6ac349ba…, blended too much into grass)
+# Both regenerated against the SAME grass lower base tile
+# (14da0cce-0d01-4186-8477-7517bfcdaa77) so edges blend identically to the other
+# sheets. path/water/building are unchanged and intentionally NOT re-assembled
+# here (leave their on-disk PNGs + GUIDs untouched).
 TILESETS = {
-    "path":     "bcfbc054-108a-4156-b8fc-fa029c4e620e",
-    "road":     "231401df-40ca-405d-a04f-cc0b0f786fd9",
-    "water":    "ec95c120-b713-402b-946b-f5ef3769bbdd",
-    "forest":   "6ac349ba-dfe1-4d39-bd89-52ed5638a6f0",
-    "building": "e37f141b-b699-40c5-b677-02c5b164d9ae",
+    "road":     "6c5b98bf-a4d3-474d-810d-c3288755efbc",
+    "forest":   "427544b7-f195-45b7-9c54-f9bc0ea65630",
 }
 
 def api_key():
