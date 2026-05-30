@@ -1,0 +1,15 @@
+{
+    "name": "EarthTests",
+    "references": [
+        "UnityEngine.TestRunner",
+        "UnityEditor.TestRunner",
+        "Earth"
+    ],
+    "includePlatforms": ["Editor"],
+    "excludePlatforms": [],
+    "overrideReferences": false,
+    "precompiledReferences": ["nunit.framework.dll"],
+    "autoReferenced": false,
+    "defineConstraints": ["UNITY_INCLUDE_TESTS"],
+    "noEngineReferences": false
+}
