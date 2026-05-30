@@ -2,3 +2,4 @@
 - [No dynamic textures](feedback_no_dynamic_textures.md) — 텍스처는 무조건 디스크 PNG → LoadImage 경유
 - [Map shell architecture](map_shell_architecture.md) — 자체 OSM raster tile 방식 (외부 SDK 0)
 - [Planet seed system](planet_seed_system.md) — GPS 1km 셀 hash → 행성 자동 결정. Splash → PlanetIntro → Hello 순서
+- [Disk full / Unity batchmode](env_disk_full_unity_batchmode.md) — 머신 디스크 거의 풀(~150MB free), batchmode가 disk-full로 실패. 실행 전 df 확인

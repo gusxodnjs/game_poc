@@ -3,4 +3,5 @@
 - [지도+플레이어 아바타 2026-05](project_map_player_avatar_2026_05.md) — 피크민 블룸 스타일, OSM 자체 타일 1순위, M1~M4 마일스톤, walker 자산 재사용
 - [행성 선택 + 시나리오 2026-05](project_planet_select_scenario_2026_05.md) — (구) PlanetSelectScene 카드 선택형. 2026-05-17 GPS 시드형으로 대체됨
 - [GPS 시드 행성 시스템 2026-05](project_gps_seed_planet_2026_05.md) — "내가 걷는 곳이 내 행성". 1km 그리드 hash → 행성 자동 결정, PlanetIntroScene
+- [씬 통합 2026-05](project_scene_integration_2026_05.md) — Intro+Map+Avatar 통합은 PocBuildPipeline에 이미 커밋된 셋업코드. 메뉴 재실행으로 산출물만 재생성, 단일 PR
 - [사용자 협업 패턴](feedback_user_workflow.md) — 백그라운드 위임, 완료 보고만, PM 재량 위임, 새 이슈만 명시 보고
