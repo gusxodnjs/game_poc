@@ -9,6 +9,9 @@ EditorBuildSettings:
     path: Assets/Scenes/SplashScene.unity
     guid: 65d796f422dc54f058b2d4064b5a1cc8
   - enabled: 1
+    path: Assets/Scenes/PlanetIntroScene.unity
+    guid: 85c8b913e752f43f0b35dc8624d37abc
+  - enabled: 1
     path: Assets/Scenes/HelloScene.unity
     guid: b148241fb5c2348efb3f25471faa62d8
   m_configObjects: {}
