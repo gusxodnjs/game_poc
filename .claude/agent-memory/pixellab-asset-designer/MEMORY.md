@@ -3,5 +3,14 @@
 - [PixelLab Min Canvas Quirk](pixellab_min_canvas_quirk.md) — 32x32 미만 사이즈는 32x32로 생성 후 PIL 다운스케일
 - [PixelLab Polling Quirk](pixellab_polling_quirk.md) — PixelLab MCP가 폴링 응답을 PNG 자리에 저장하는 버그 — 70B 파일 의심 신호
 - [PixelLab No-Background Quirk](pixellab_no_background_quirk.md) — `no_background:true`가 솔리드 배경을 반환할 때 corner-color 알파 클리핑 후처리
+- [PixelLab Uniform Terrain Quirk](pixellab_uniform_terrain_quirk.md) — 32x32 base 지형 타일에 장식 끼어듦; 부정어+guidance 11+재생성으로 대응
 - [Asset Verification Checklist](asset_verification_checklist.md) — 생성 후 file/sips 검증 단계
 - [Asset Directory Conventions](asset_directory_conventions.md) — assets/ 폴더 구조와 .meta 파일 처리
+- [Topdown Tileset = Corner-Wang](pixellab_topdown_tileset_corner_wang.md) — create_topdown_tileset은 4-edge가 아닌 4-corner Wang; edge-mask와 1:1 매핑 불가
+- [Seamless Tile Offset-Heal](seamless_tile_offset_heal_recipe.md) — PixelLab 타일을 offset-and-heal로 강제 seamless화 (pure PIL); scatter 변형은 nudge 작게
+- [Road Asphalt Limitation](pixellab_road_asphalt_limitation.md) — create_topdown_tileset은 매끈한 아스팔트+차선 거부, 벽돌로 감; guidance 9+selective가 최선
+- [Flat Autotile Mask-Composite](flat_autotile_mask_composite_recipe.md) — 절벽 없는 평지 오토타일: create_topdown_tileset 대신 평탄텍스처+코너마스크 합성 (Layout A)
+- [Map Object Tree Recipe](map_object_tree_recipe.md) — create_map_object로 transparent 나무/덤불/그루터기; low top-down + bottom-anchor 후처리
+- [Map Object House Recipe](map_object_house_recipe.md) — create_map_object 64x64로 OSM 건물용 코지 오두막(빨강 박공지붕); low top-down + bottom-anchor
+- [Walker Walk Frame Recipe](walker_walk_frame_recipe.md) — 정면 4프레임 walk: create_character(chibi)+walk템플릿 south 6f→phase[0,1,3,4], 공유scale+발 baseline앵커, curl UA
+- [Git Case Mismatch Staging](git_case_mismatch_assets_staging.md) — 신규 에셋은 git status가 소문자 assets/로 보고; 대문자 add 시 조용히 누락
