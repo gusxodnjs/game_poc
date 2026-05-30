@@ -29,10 +29,17 @@ public static class GeoTileGrid
     /// <summary>위경도(도) → 전역 타일 좌표 (tx, ty). 원점은 좌상단(북서), ty는 남쪽으로 증가.</summary>
     public static (long tx, long ty) LatLonToTile(double lat, double lon)
     {
+        var (txf, tyf) = LatLonToTileFractional(lat, lon);
+        return ((long)Math.Floor(txf), (long)Math.Floor(tyf));
+    }
+
+    /// <summary>위경도 → 전역 타일 좌표(소수). 정수 floor = LatLonToTile. 렌더 정렬용.</summary>
+    public static (double txf, double tyf) LatLonToTileFractional(double lat, double lon)
+    {
         var (mx, my) = LatLonToMercatorMeters(lat, lon);
-        long tx = (long)Math.Floor((mx + OriginShift) / TileMeters);
-        long ty = (long)Math.Floor((OriginShift - my) / TileMeters);
-        return (tx, ty);
+        double txf = (mx + OriginShift) / TileMeters;
+        double tyf = (OriginShift - my) / TileMeters;
+        return (txf, tyf);
     }
 
     /// <summary>타일 좌표 → 청크 좌표. 음수도 floor 방향으로 내림.</summary>
