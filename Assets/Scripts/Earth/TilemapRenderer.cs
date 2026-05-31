@@ -43,13 +43,14 @@ public class TilemapRenderer : MonoBehaviour
     [SerializeField, Range(0, 4)] private int paddingTiles = 2;
 
     private double _centerLat, _centerLon;
-    private double _gpsLat, _gpsLon;     // 마지막 GPS 위치(리센터용)
-    private bool _followGps = true;       // true=플레이어 추적, false=자유 둘러보기(드래그)
+    private double _gpsLat, _gpsLon;     // 마지막 GPS 위치
     private bool _dragging = false;
     private Vector2 _lastDragPos;
     private float _prevPinchDist = -1f;
-    private GUIStyle _btnStyle;
+    private float _headingDeg = 0f;       // 맵 회전(피크민). _root 에 적용, 오브젝트/생물은 역회전 빌보드.
     private Transform _root;
+
+    private const float RotSpeedDegPerPx = 0.3f; // 한손 드래그 가로 1px → 회전(도)
 
     private readonly Dictionary<(long, long), SpriteRenderer> _baseActive = new();
     private readonly Stack<SpriteRenderer> _basePool = new();
@@ -72,6 +73,11 @@ public class TilemapRenderer : MonoBehaviour
     private const float BaseOrtho = 4.5f;
     public float ZoomFactor => (mapCamera != null && mapCamera.orthographicSize > 0.01f)
         ? BaseOrtho / mapCamera.orthographicSize : 1f;
+
+    // 맵 회전(deg). CreatureField 가 생물 빌보드 역회전(-Heading)에 사용.
+    public float HeadingDeg => _headingDeg;
+    private Quaternion HeadingRot => Quaternion.Euler(0f, 0f, _headingDeg);
+    private Quaternion HeadingRotInv => Quaternion.Euler(0f, 0f, -_headingDeg);
 
     // --- 생물 레이어(CreatureField)용 공개 접근자 ---
     // 생물 스프라이트는 이 _root 하위에 두면 타일과 동일 좌표계 → 팬/줌이 자동 일치.
@@ -196,9 +202,10 @@ public class TilemapRenderer : MonoBehaviour
     public void SetCenter(double lat, double lon)
     {
         if (System.Math.Abs(lat) < 0.001 && System.Math.Abs(lon) < 0.001) return;
+        // 피크민: 카메라는 항상 내 위치 중심(자유 팬 없음) → center=gps.
         _gpsLat = lat; _gpsLon = lon;
-        if (_followGps) { _centerLat = lat; _centerLon = lon; Refresh(); }
-        // 자유 둘러보기 중이면 화면 중심은 그대로 두고 GPS만 기록.
+        _centerLat = lat; _centerLon = lon;
+        Refresh();
     }
 
     private void Start() => Refresh();
@@ -249,6 +256,7 @@ public class TilemapRenderer : MonoBehaviour
         if (mapCamera == null) mapCamera = Camera.main; // 리로드로 참조 유실 시 재획득
         if (mapCamera == null) return;
         EnsureInitialized();                            // 도메인 리로드 자가복구(아래 패스의 _autoSheets/_root NRE 방지)
+        _root.localRotation = HeadingRot;               // 맵 회전(지면/오버레이는 함께 회전)
         var (centerTxF, centerTyF) = GeoTileGrid.LatLonToTileFractional(_centerLat, _centerLon);
 
         // 플레이어(GPS)의 화면 중심 대비 GUI 오프셋(px). 추적 중이면 0(중앙).
@@ -262,8 +270,9 @@ public class TilemapRenderer : MonoBehaviour
 
         float halfH = mapCamera.orthographicSize;
         float halfW = halfH * mapCamera.aspect;
-        int rangeX = Mathf.CeilToInt(halfW) + paddingTiles;
-        int rangeY = Mathf.CeilToInt(halfH) + paddingTiles;
+        // 회전 대비: 가시 영역이 회전해도 빈 모서리 없도록 대각선 반경으로 확장(rangeX=rangeY).
+        int range = Mathf.CeilToInt(Mathf.Sqrt(halfW * halfW + halfH * halfH)) + paddingTiles;
+        int rangeX = range, rangeY = range;
         long centerTx = (long)System.Math.Floor(centerTxF);
         long centerTy = (long)System.Math.Floor(centerTyF);
 
@@ -326,11 +335,11 @@ public class TilemapRenderer : MonoBehaviour
                 float wy = (float)-(ty + 0.5 - centerTyF) + jy;
                 sr.transform.localPosition = new Vector3(wx, wy, 0f);
                 sr.transform.localScale = new Vector3(scale, scale, 1f); // (A) 인스턴스 스케일 변형
+                sr.transform.localRotation = HeadingRotInv;             // 맵이 돌아도 수직 유지(빌보드)
                 sr.sprite = obj;
                 uint hh = TileHash(tx, ty);
                 sr.flipX = ((hh >> 16) & 1u) == 1u;
-                // Y-sort: 화면 아래(낮은 wy)일수록 앞(높은 order). 지형(0~5) 위로 띄움.
-                sr.sortingOrder = 100 + Mathf.RoundToInt((50f - wy) * 8f);
+                sr.sortingOrder = ObjSortingOrder(wx, wy);              // 회전된 화면 깊이 기준 Y-sort
             }
         ReleaseUnneeded(_objActive, objNeeded, _objPool);
 
@@ -361,6 +370,13 @@ public class TilemapRenderer : MonoBehaviour
         if (_ovPool.Count > 0) { var s = _ovPool.Pop(); s.gameObject.SetActive(true); return s; }
         var go = new GameObject("ETileOverlay"); go.transform.SetParent(_root, false);
         var sr = go.AddComponent<SpriteRenderer>(); sr.sortingOrder = 1; return sr;
+    }
+
+    // (tx,ty) 바로 북쪽(ty-1, 화면 위)이 도로/길인가 — 캐노피가 위로 뻗어 도로를 덮는지 판정.
+    private bool RoadOrPathNorth(long tx, long ty)
+    {
+        var n = TileTypeAt(tx, ty - 1);
+        return n == TileType.Road || n == TileType.Path;
     }
 
     // (tx,ty) 주변 반경 r 안에 타입 t 가 하나라도 있나.
@@ -421,18 +437,30 @@ public class TilemapRenderer : MonoBehaviour
 
         if (tt == TileType.Forest)
         {
-            // 거의 모든 forest 타일에 나무 → 빽빽한 숲
+            // 도로가 바로 북쪽 → 캐노피가 도로 침범 → 나무 금지(덤불 완충)
+            if (RoadOrPathNorth(tx, ty)) { scale = decoScale; return _bush; }
+            // 도로/길 인접 숲 가장자리 페더링: 나무 밀도↓(90→45%) + 작은 나무/덤불 → 벽 끊김 완화
+            if (NearType(tx, ty, TileType.Road, 1) || NearType(tx, ty, TileType.Path, 1))
+            {
+                if ((hh % 100u) < 45u) { scale = treeScale * 0.85f; return ((hh >> 1) & 1u) == 0u ? _treeA : _treeB; }
+                scale = decoScale; return _bush;
+            }
+            // 그 외: 거의 모든 forest 타일에 나무 → 빽빽한 숲
             if ((hh % 100u) < 90u) { scale = treeScale; return ((hh >> 1) & 1u) == 0u ? _treeA : _treeB; }
             scale = decoScale; return _bush; // 나머지는 덤불로 메움
         }
         if (tt == TileType.Grass)
         {
-            // 숲 가장자리: 숲에 인접한 잔디 → 나무로 자연스러운 군락 falloff(숲이 잔디로 번짐)
-            if (NearType(tx, ty, TileType.Forest, 1) && (hh % 100u) < 55u)
+            // 숲 가장자리: 숲에 인접한 잔디 → 나무 falloff. 단 도로가 바로 북쪽이면 캐노피 침범 → 제외.
+            if (NearType(tx, ty, TileType.Forest, 1) && (hh % 100u) < 55u && !RoadOrPathNorth(tx, ty))
             { scale = treeScale; return ((hh >> 1) & 1u) == 0u ? _treeA : _treeB; }
             // 길/도로 옆 가로수 라인(구도 프레이밍)
             if ((NearType(tx, ty, TileType.Road, 1) || NearType(tx, ty, TileType.Path, 1)) && (hh % 100u) < 22u)
-            { scale = treeScale; return ((hh >> 1) & 1u) == 0u ? _treeA : _treeB; }
+            {
+                // 도로가 바로 북쪽이면 캐노피가 도로를 덮음 → 나무 대신 덤불/풀 완충
+                if (RoadOrPathNorth(tx, ty)) { scale = decoScale; return ((hh >> 5) & 1u) == 0u ? _bush : _tuftA; }
+                scale = treeScale; return ((hh >> 1) & 1u) == 0u ? _treeA : _treeB;
+            }
 
             // (B) 클러스터 밀도 변조: 공터 ↔ 군집. 평균 밀도는 현행보다 하향.
             float c = ClusterValue(tx, ty, DecoSeed);          // 0..1 저주파
@@ -464,6 +492,37 @@ public class TilemapRenderer : MonoBehaviour
         var sr = go.AddComponent<SpriteRenderer>(); sr.sortingOrder = 100; return sr;
     }
 
+    // 오브젝트의 회전된 화면 깊이로 Y-sort(화면 아래=앞=높은 order). wx,wy=로컬(미회전) 위치.
+    private int ObjSortingOrder(float wx, float wy)
+    {
+        float rot = _headingDeg * Mathf.Deg2Rad;
+        float screenY = wx * Mathf.Sin(rot) + wy * Mathf.Cos(rot);
+        return 100 + Mathf.RoundToInt((50f - screenY) * 8f);
+    }
+
+    // 회전만 갱신(타일 재산출 없이): _root 회전 + 활성 오브젝트 빌보드 역회전 + Y-sort 갱신.
+    // 드래그 중 매 프레임 호출(가벼움). 타일 집합은 대각선 범위라 회전해도 커버됨.
+    private void ApplyHeading()
+    {
+        if (_root == null) return;
+        _root.localRotation = HeadingRot;
+        var inv = HeadingRotInv;
+        foreach (var sr in _objActive.Values)
+        {
+            if (sr == null) continue;
+            sr.transform.localRotation = inv;
+            var p = sr.transform.localPosition;
+            sr.sortingOrder = ObjSortingOrder(p.x, p.y);
+        }
+    }
+
+    private void RotateByDelta(float dxPixels)
+    {
+        if (Mathf.Abs(dxPixels) < 0.5f) return;
+        _headingDeg += dxPixels * RotSpeedDegPerPx;
+        ApplyHeading();
+    }
+
     private float _t;
     private void Update()
     {
@@ -472,6 +531,7 @@ public class TilemapRenderer : MonoBehaviour
         if (_t >= 1f) { _t = 0f; Refresh(); }
     }
 
+    // 피크민 한손 조작: 한 손가락 가로 드래그 = 회전, 두 손가락 = 핀치 줌. (자유 팬 없음)
     private void HandleDrag()
     {
         if (mapCamera == null) return;
@@ -481,18 +541,18 @@ public class TilemapRenderer : MonoBehaviour
         if (!Input.GetMouseButton(0)) { _dragging = false; return; }
         Vector2 mpos = (Vector2)Input.mousePosition;
         if (!_dragging) { _dragging = true; _lastDragPos = mpos; return; }
-        PanByDelta(mpos - _lastDragPos);
+        RotateByDelta(mpos.x - _lastDragPos.x); // 가로 이동만 회전(세로=고도는 후속 틸트)
         _lastDragPos = mpos;
 #else
         if (Input.touchCount >= 2)
         {
-            // 두 손가락 = 핀치 줌만 (팬 안 함)
+            // 두 손가락 = 핀치 줌
             var t0 = Input.GetTouch(0); var t1 = Input.GetTouch(1);
             float dist = Vector2.Distance(t0.position, t1.position);
             if (_prevPinchDist > 1f && Mathf.Abs(dist - _prevPinchDist) > 1f)
                 SetZoom(mapCamera.orthographicSize * (_prevPinchDist / Mathf.Max(1f, dist)));
             _prevPinchDist = dist;
-            _dragging = false; // 팬 상태 리셋(손가락 떼고 한 손가락 전환 시 점프 방지)
+            _dragging = false; // 회전 상태 리셋(손가락 떼고 한 손가락 전환 시 점프 방지)
             return;
         }
         _prevPinchDist = -1f;
@@ -500,25 +560,11 @@ public class TilemapRenderer : MonoBehaviour
         {
             Vector2 pos = Input.GetTouch(0).position;
             if (!_dragging) { _dragging = true; _lastDragPos = pos; return; }
-            PanByDelta(pos - _lastDragPos);
+            RotateByDelta(pos.x - _lastDragPos.x);
             _lastDragPos = pos;
         }
         else { _dragging = false; }
 #endif
-    }
-
-    // 화면 픽셀 delta 만큼 지도 중심 이동(자유 둘러보기). 기존 팬 수식 추출.
-    private void PanByDelta(Vector2 delta)
-    {
-        if (delta.sqrMagnitude < 0.25f) return;
-        float ppu = Screen.height / (2f * mapCamera.orthographicSize);
-        double dTx = delta.x / ppu, dTy = delta.y / ppu;
-        _followGps = false;
-        var (txf, tyf) = GeoTileGrid.LatLonToTileFractional(_centerLat, _centerLon);
-        txf -= dTx; tyf += dTy;
-        var (la, lo) = GeoTileGrid.TileFractionalToLatLon(txf, tyf);
-        _centerLat = la; _centerLon = lo;
-        Refresh();
     }
 
     private void SetZoom(float ortho)
@@ -529,23 +575,4 @@ public class TilemapRenderer : MonoBehaviour
         Refresh();
     }
 
-    private void OnGUI()
-    {
-        if (_followGps) return;
-        if (_btnStyle == null)
-        {
-            _btnStyle = new GUIStyle(GUI.skin.button) { fontSize = Mathf.Max(16, Screen.height / 40) };
-        }
-        float w = Screen.width * 0.30f, h = Screen.height * 0.07f;
-        Rect safe = Screen.safeArea;
-        float bx = safe.x + safe.width - w - 16f;
-        float by = Screen.height - (safe.y) - h - 16f; // 우하단 safe
-        if (GUI.Button(new Rect(bx, by, w, h), "내 위치", _btnStyle))
-        {
-            _followGps = true;
-            _centerLat = _gpsLat; _centerLon = _gpsLon;
-            _dragging = false;
-            Refresh();
-        }
-    }
 }
