@@ -24,17 +24,21 @@ public class PlayerAvatar : MonoBehaviour
 
     [Header("타이밍")]
     [Tooltip("Idle 애니메이션 FPS")]
-    public float idleFps = 6f;
+    public float idleFps = 8f;
     [Tooltip("정확도 링 펄스 주기 (초)")]
     public float ringPulsePeriodSec = 1.5f;
 
     [Header("크기 (논리 픽셀 스케일)")]
-    [Tooltip("캐릭터 스케일 — 64*2.5 = 160px (모바일 가시성 확보)")]
-    public float characterScale = 2.5f;
+    [Tooltip("캐릭터 스케일 — 64*3.2 = 205px (모바일 가시성 확보)")]
+    public float characterScale = 3.2f;
     [Tooltip("정확도 링 스케일 — 캐릭터보다 살짝 큰 범위")]
-    public float ringScale = 3.0f;
+    public float ringScale = 3.4f;
     [Tooltip("그림자 스케일")]
-    public float shadowScale = 2.0f;
+    public float shadowScale = 2.6f;
+
+    [Header("지도 연동")]
+    [Tooltip("패닝 시 아바타를 GPS 실제 위치에 고정하기 위한 화면 오프셋 소스")]
+    [SerializeField] private TilemapRenderer tilemap;
 
     private float _startTime;
 
@@ -51,6 +55,7 @@ public class PlayerAvatar : MonoBehaviour
 
         float cx = Screen.width * 0.5f;
         float cy = Screen.height * 0.5f;
+        if (tilemap != null) { var o = tilemap.PlayerGuiOffset; cx += o.x; cy += o.y; }
 
         // 1) accuracy ring — sin 파형 펄스로 alpha 0.4 ~ 0.8 왕복
         if (accuracyRingTex != null)

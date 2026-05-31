@@ -2,4 +2,6 @@
 - [No dynamic textures](feedback_no_dynamic_textures.md) — 텍스처는 무조건 디스크 PNG → LoadImage 경유
 - [Map shell architecture](map_shell_architecture.md) — 자체 OSM raster tile 방식 (외부 SDK 0)
 - [Planet seed system](planet_seed_system.md) — GPS 1km 셀 hash → 행성 자동 결정. Splash → PlanetIntro → Hello 순서
-- [Disk full / Unity batchmode](env_disk_full_unity_batchmode.md) — 머신 디스크 거의 풀(~150MB free), batchmode가 disk-full로 실패. 실행 전 df 확인
+- [Disk full / Unity batchmode](env_disk_full_unity_batchmode.md) — batchmode disk-full 이력 있음. 실행 전 df 확인 (2026-05-30엔 14Gi free, 정상)
+- [Earth layer asmdef](earth_layer_asmdef.md) — #52 Earth 스크립트는 자체 Earth.asmdef 사용 (Unity 6 테스트 참조 제약). autoReferenced=true
+- [Unity Editor lock](env_unity_editor_lock.md) — batchmode "another Unity instance running" → Editor kill 금지, 코드만 커밋+DONE_WITH_CONCERNS

@@ -41,6 +41,67 @@ public static class PocBuildPipeline
     private const string PlayerRingPath = "Assets/characters/player_accuracy_ring_64x64.png";
     private const string PlayerShadowPath = "Assets/characters/player_shadow_32x16.png";
 
+    // Earth 타일셋 (TilemapRenderer 의 grass + 5종 오토타일 시트 슬롯에 주입)
+    // grass=32×32 단일, 나머지는 128×128 autotile 시트 (렌더러가 코드로 슬라이스).
+    private const string TilesetDir = "Assets/world/tiles";
+    private static readonly string[] TilesetPaths = {
+        TilesetDir + "/grass_v0_32.png",
+        TilesetDir + "/grass_v1_32.png",
+        TilesetDir + "/grass_v2_32.png",
+        TilesetDir + "/grass_v3_32.png",
+        TilesetDir + "/path_auto_128.png",
+        TilesetDir + "/road_auto_128.png",
+        TilesetDir + "/water_auto_128.png",
+        TilesetDir + "/forest_auto_128.png",
+        TilesetDir + "/building_auto_128.png",
+    };
+
+    // Earth 오브젝트(나무/덤불/그루터기) — TilemapRenderer 의 object 슬롯에 주입. 투명·하단앵커.
+    private const string ObjectsDir = "Assets/world/objects";
+    private static readonly string[] ObjectPaths = {
+        ObjectsDir + "/tree_pine_a_48x64.png",
+        ObjectsDir + "/tree_pine_b_48x64.png",
+        ObjectsDir + "/bush_32x32.png",
+        ObjectsDir + "/stump_32x32.png",
+        ObjectsDir + "/tuft_grass_a_16x16.png",
+        ObjectsDir + "/tuft_grass_b_16x16.png",
+        ObjectsDir + "/tuft_grass_c_16x16.png",
+        ObjectsDir + "/flower_white_16x16.png",
+        ObjectsDir + "/flower_red_16x16.png",
+        ObjectsDir + "/house_a_64x64.png",
+        ObjectsDir + "/house_b_64x64.png",
+    };
+
+    private static void EnsureTilesetTextureSettings()
+    {
+        foreach (var path in TilesetPaths)
+        {
+            var importer = AssetImporter.GetAtPath(path) as TextureImporter;
+            if (importer == null) continue;
+            importer.textureType = TextureImporterType.Sprite;
+            importer.filterMode = FilterMode.Point;
+            importer.mipmapEnabled = false;
+            importer.alphaIsTransparency = true;
+            importer.spritePixelsPerUnit = 32;
+            importer.SaveAndReimport();
+        }
+    }
+
+    private static void EnsureObjectTextureSettings()
+    {
+        foreach (var path in ObjectPaths)
+        {
+            var importer = AssetImporter.GetAtPath(path) as TextureImporter;
+            if (importer == null) continue;
+            importer.textureType = TextureImporterType.Sprite;
+            importer.filterMode = FilterMode.Point;
+            importer.mipmapEnabled = false;
+            importer.alphaIsTransparency = true;
+            importer.spritePixelsPerUnit = 32;
+            importer.SaveAndReimport();
+        }
+    }
+
     private const string BundleId = "com.gusxodnjs.terrapoc";
     private const string BuildOutput = "build/ios";
 
@@ -51,39 +112,69 @@ public static class PocBuildPipeline
 
         var scene = EditorSceneManager.NewScene(NewSceneSetup.DefaultGameObjects, NewSceneMode.Single);
 
-        // 카메라: MapView 가 SpriteRenderer 기반이므로 Orthographic 필수.
-        // ortho size = 1.5 → 화면 높이 3 unit ≈ 3 타일 (zoom 17 기준 약 ±200m 가시영역)
+        // 카메라: TilemapRenderer 가 SpriteRenderer 기반 → Orthographic.
         var cam = Camera.main;
         if (cam != null)
         {
             cam.orthographic = true;
-            cam.orthographicSize = 1.5f;
+            cam.orthographicSize = 4.5f; // ≈27m 가시 (Pikmin 줌)
             cam.transform.position = new Vector3(0f, 0f, -10f);
             cam.clearFlags = CameraClearFlags.SolidColor;
-            cam.backgroundColor = new Color32(0x08, 0x0d, 0x1f, 0xff);
+            cam.backgroundColor = new Color32(0x82, 0xcf, 0x1c, 0xff); // grass 톤 (이음새 은폐)
             cam.nearClipPlane = 0.1f;
             cam.farClipPlane = 100f;
         }
 
+        EnsureTilesetTextureSettings();
+        EnsureObjectTextureSettings();
+
         var map = new GameObject("MapRoot");
-        var mapView = map.AddComponent<MapView>();
+        var tilemap = map.AddComponent<TilemapRenderer>();
+        var tmSo = new SerializedObject(tilemap);
+        var gv = tmSo.FindProperty("grassVariants");
+        gv.arraySize = 4;
+        gv.GetArrayElementAtIndex(0).objectReferenceValue = AssetDatabase.LoadAssetAtPath<Texture2D>(TilesetDir + "/grass_v0_32.png");
+        gv.GetArrayElementAtIndex(1).objectReferenceValue = AssetDatabase.LoadAssetAtPath<Texture2D>(TilesetDir + "/grass_v1_32.png");
+        gv.GetArrayElementAtIndex(2).objectReferenceValue = AssetDatabase.LoadAssetAtPath<Texture2D>(TilesetDir + "/grass_v2_32.png");
+        gv.GetArrayElementAtIndex(3).objectReferenceValue = AssetDatabase.LoadAssetAtPath<Texture2D>(TilesetDir + "/grass_v3_32.png");
+        tmSo.FindProperty("pathSheet").objectReferenceValue     = AssetDatabase.LoadAssetAtPath<Texture2D>(TilesetDir + "/path_auto_128.png");
+        tmSo.FindProperty("roadSheet").objectReferenceValue     = AssetDatabase.LoadAssetAtPath<Texture2D>(TilesetDir + "/road_auto_128.png");
+        tmSo.FindProperty("waterSheet").objectReferenceValue    = AssetDatabase.LoadAssetAtPath<Texture2D>(TilesetDir + "/water_auto_128.png");
+        tmSo.FindProperty("forestSheet").objectReferenceValue   = AssetDatabase.LoadAssetAtPath<Texture2D>(TilesetDir + "/forest_auto_128.png");
+        tmSo.FindProperty("buildingSheet").objectReferenceValue = AssetDatabase.LoadAssetAtPath<Texture2D>(TilesetDir + "/building_auto_128.png");
+        tmSo.FindProperty("treePineA").objectReferenceValue = AssetDatabase.LoadAssetAtPath<Texture2D>(ObjectsDir + "/tree_pine_a_48x64.png");
+        tmSo.FindProperty("treePineB").objectReferenceValue = AssetDatabase.LoadAssetAtPath<Texture2D>(ObjectsDir + "/tree_pine_b_48x64.png");
+        tmSo.FindProperty("bushTex").objectReferenceValue   = AssetDatabase.LoadAssetAtPath<Texture2D>(ObjectsDir + "/bush_32x32.png");
+        tmSo.FindProperty("stumpTex").objectReferenceValue  = AssetDatabase.LoadAssetAtPath<Texture2D>(ObjectsDir + "/stump_32x32.png");
+        tmSo.FindProperty("tuftA").objectReferenceValue       = AssetDatabase.LoadAssetAtPath<Texture2D>(ObjectsDir + "/tuft_grass_a_16x16.png");
+        tmSo.FindProperty("tuftB").objectReferenceValue       = AssetDatabase.LoadAssetAtPath<Texture2D>(ObjectsDir + "/tuft_grass_b_16x16.png");
+        tmSo.FindProperty("tuftC").objectReferenceValue       = AssetDatabase.LoadAssetAtPath<Texture2D>(ObjectsDir + "/tuft_grass_c_16x16.png");
+        tmSo.FindProperty("flowerWhite").objectReferenceValue = AssetDatabase.LoadAssetAtPath<Texture2D>(ObjectsDir + "/flower_white_16x16.png");
+        tmSo.FindProperty("flowerRed").objectReferenceValue   = AssetDatabase.LoadAssetAtPath<Texture2D>(ObjectsDir + "/flower_red_16x16.png");
+        tmSo.FindProperty("houseA").objectReferenceValue = AssetDatabase.LoadAssetAtPath<Texture2D>(ObjectsDir + "/house_a_64x64.png");
+        tmSo.FindProperty("houseB").objectReferenceValue = AssetDatabase.LoadAssetAtPath<Texture2D>(ObjectsDir + "/house_b_64x64.png");
+        tmSo.ApplyModifiedPropertiesWithoutUndo();
+        int tilesetLoaded = 0;
+        foreach (var path in TilesetPaths)
+            if (AssetDatabase.LoadAssetAtPath<Texture2D>(path) != null) tilesetLoaded++;
+        Debug.Log("[POC] TilemapRenderer wired: tileset=" + tilesetLoaded + "/9");
+        int objectsLoaded = 0;
+        foreach (var path in ObjectPaths)
+            if (AssetDatabase.LoadAssetAtPath<Texture2D>(path) != null) objectsLoaded++;
+        Debug.Log("[POC] objects wired: " + objectsLoaded + "/4");
 
         var gps = new GameObject("GpsRoot");
         var gpsCheck = gps.AddComponent<GpsCheck>();
-
-        // GpsCheck.mapView SerializeField 에 MapView 참조 직접 주입.
-        // 이 와이어링이 빠지면 GPS 갱신이 MapView.SetCenter 를 호출하지 못해
-        // 지도가 서울시청(initialLat/Lon) 고정으로 보임.
         var so = new SerializedObject(gpsCheck);
-        var prop = so.FindProperty("mapView");
+        var prop = so.FindProperty("tilemap"); // 필드명 mapView→tilemap 로 변경됨
         if (prop != null)
         {
-            prop.objectReferenceValue = mapView;
+            prop.objectReferenceValue = tilemap;
             so.ApplyModifiedPropertiesWithoutUndo();
         }
         else
         {
-            Debug.LogWarning("[POC] GpsCheck.mapView SerializedProperty not found — GPS→MapView wiring skipped.");
+            Debug.LogWarning("[POC] GpsCheck.tilemap SerializedProperty not found — GPS→Tilemap wiring skipped.");
         }
 
         var discovery = new GameObject("DiscoveryRoot");
@@ -96,6 +187,10 @@ public static class PocBuildPipeline
 
         var player = new GameObject("PlayerRoot");
         var avatar = player.AddComponent<PlayerAvatar>();
+        avatar.characterScale = 3.2f;
+        avatar.ringScale = 3.4f;
+        avatar.shadowScale = 2.6f;
+        avatar.idleFps = 8f;
         var idleTex = new Texture2D[PlayerIdlePaths.Length];
         int idleLoaded = 0;
         for (int i = 0; i < PlayerIdlePaths.Length; i++)
@@ -110,6 +205,11 @@ public static class PocBuildPipeline
         Debug.Log("[POC] PlayerAvatar wired: idle=" + idleLoaded + "/" + PlayerIdlePaths.Length +
                   ", ring=" + (avatar.accuracyRingTex != null) +
                   ", shadow=" + (avatar.shadowTex != null));
+
+        // 아바타 → 지도(GPS 오프셋) 참조 연결: 패닝 시 캐릭터가 실제 위치에 고정되도록.
+        var avSo = new SerializedObject(avatar);
+        var avTmProp = avSo.FindProperty("tilemap");
+        if (avTmProp != null) { avTmProp.objectReferenceValue = tilemap; avSo.ApplyModifiedPropertiesWithoutUndo(); }
 
         EditorSceneManager.SaveScene(scene, ScenePath);
 

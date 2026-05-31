@@ -1,0 +1,33 @@
+{
+  "total_usd": 0.0,
+  "results": [
+    {
+      "path": "assets/world/tiles/grass_32.png",
+      "size": "32x32",
+      "ok": true,
+      "usd": 0.0,
+      "err": ""
+    },
+    {
+      "path": "assets/world/tiles/path_32.png",
+      "size": "32x32",
+      "ok": true,
+      "usd": 0.0,
+      "err": ""
+    },
+    {
+      "path": "assets/world/tiles/water_32.png",
+      "size": "32x32",
+      "ok": true,
+      "usd": 0.0,
+      "err": ""
+    },
+    {
+      "path": "assets/world/tiles/forest_32.png",
+      "size": "32x32",
+      "ok": true,
+      "usd": 0.0,
+      "err": ""
+    }
+  ]
+}
