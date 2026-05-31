@@ -106,11 +106,28 @@ public class TilemapRenderer : MonoBehaviour
             mapCamera.orthographic = true;
             mapCamera.orthographicSize = 4.5f;
         }
+        _centerLat = initialLat; _centerLon = initialLon;
+        _gpsLat = initialLat; _gpsLon = initialLon;
+        EnsureInitialized();
+    }
+
+    // 비직렬화 상태(_root/스프라이트)를 멱등하게 (재)구축.
+    // Editor 에서 Play 중 스크립트 재컴파일 → 도메인 리로드가 일어나면 Awake 가 다시 호출되지 않은 채
+    // private 필드가 null 로 리셋된다. Refresh 진입 시 이걸 감지해 자가복구(빈 화면/NRE 방지).
+    private void EnsureInitialized()
+    {
+        if (_autoSheets != null && _root != null) return;
+
+        // 리로드로 참조만 잃고 실제 GameObject 는 씬에 남았을 수 있음(고아) → 제거 후 재생성.
+        var stale = transform.Find("EarthTiles");
+        if (stale != null) Destroy(stale.gameObject);
+        _baseActive.Clear(); _basePool.Clear();
+        _ovActive.Clear(); _ovPool.Clear();
+        _objActive.Clear(); _objPool.Clear();
+
         var rootGo = new GameObject("EarthTiles");
         rootGo.transform.SetParent(transform, false);
         _root = rootGo.transform;
-        _centerLat = initialLat; _centerLon = initialLon;
-        _gpsLat = initialLat; _gpsLon = initialLon;
         BuildSprites();
     }
 
@@ -222,7 +239,9 @@ public class TilemapRenderer : MonoBehaviour
 
     private void Refresh()
     {
+        if (mapCamera == null) mapCamera = Camera.main; // 리로드로 참조 유실 시 재획득
         if (mapCamera == null) return;
+        EnsureInitialized();                            // 도메인 리로드 자가복구(아래 패스의 _autoSheets/_root NRE 방지)
         var (centerTxF, centerTyF) = GeoTileGrid.LatLonToTileFractional(_centerLat, _centerLon);
 
         // 플레이어(GPS)의 화면 중심 대비 GUI 오프셋(px). 추적 중이면 0(중앙).
