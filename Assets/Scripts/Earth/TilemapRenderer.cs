@@ -73,6 +73,31 @@ public class TilemapRenderer : MonoBehaviour
     public float ZoomFactor => (mapCamera != null && mapCamera.orthographicSize > 0.01f)
         ? BaseOrtho / mapCamera.orthographicSize : 1f;
 
+    // --- 생물 레이어(CreatureField)용 공개 접근자 ---
+    // 생물 스프라이트는 이 _root 하위에 두면 타일과 동일 좌표계 → 팬/줌이 자동 일치.
+    public Transform MapRoot => _root;
+
+    /// <summary>전역 타일-분수좌표(gxf,gyf) → _root 하위 로컬 위치(타일과 동일 변환).</summary>
+    public Vector3 LocalForTileFrac(double gxf, double gyf)
+    {
+        var (cTxF, cTyF) = GeoTileGrid.LatLonToTileFractional(_centerLat, _centerLon);
+        return new Vector3((float)(gxf - cTxF), (float)(cTyF - gyf), 0f);
+    }
+
+    /// <summary>현재 화면 중심의 전역 타일-분수좌표.</summary>
+    public void CenterTileFrac(out double txf, out double tyf)
+    {
+        var (a, b) = GeoTileGrid.LatLonToTileFractional(_centerLat, _centerLon);
+        txf = a; tyf = b;
+    }
+
+    /// <summary>생물이 지나갈 수 있는 타일인가(물/건물은 회피).</summary>
+    public bool IsWalkable(long tx, long ty)
+    {
+        var t = TileTypeAt(tx, ty);
+        return t != TileType.Water && t != TileType.Building;
+    }
+
     private void Awake()
     {
         if (mapCamera == null) mapCamera = Camera.main;
