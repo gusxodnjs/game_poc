@@ -67,6 +67,12 @@ public class TilemapRenderer : MonoBehaviour
     // 플레이어(GPS)의 화면 중심 대비 GUI 오프셋(px). PlayerAvatar 가 소비.
     public Vector2 PlayerGuiOffset { get; private set; }
 
+    // 핀치줌 배율: 기본 ortho(4.5) 대비 현재 ortho. 줌인(ortho↓) → 1보다 커짐.
+    // PlayerAvatar(및 향후 생물)가 화면 크기에 곱해 월드와 함께 줌되도록.
+    private const float BaseOrtho = 4.5f;
+    public float ZoomFactor => (mapCamera != null && mapCamera.orthographicSize > 0.01f)
+        ? BaseOrtho / mapCamera.orthographicSize : 1f;
+
     private void Awake()
     {
         if (mapCamera == null) mapCamera = Camera.main;
