@@ -67,6 +67,12 @@ public class TilemapRenderer : MonoBehaviour
     // 플레이어(GPS)의 화면 중심 대비 GUI 오프셋(px). PlayerAvatar 가 소비.
     public Vector2 PlayerGuiOffset { get; private set; }
 
+    // 핀치줌 배율: 기본 ortho(4.5) 대비 현재 ortho. 줌인(ortho↓) → 1보다 커짐.
+    // PlayerAvatar(및 향후 생물)가 화면 크기에 곱해 월드와 함께 줌되도록.
+    private const float BaseOrtho = 4.5f;
+    public float ZoomFactor => (mapCamera != null && mapCamera.orthographicSize > 0.01f)
+        ? BaseOrtho / mapCamera.orthographicSize : 1f;
+
     private void Awake()
     {
         if (mapCamera == null) mapCamera = Camera.main;
@@ -261,13 +267,14 @@ public class TilemapRenderer : MonoBehaviour
             for (int dx = -rangeX; dx <= rangeX; dx++)
             {
                 long tx = centerTx + dx, ty = centerTy + dy;
-                Sprite obj = PickObject(tx, ty, out float jx, out float jy);
+                Sprite obj = PickObject(tx, ty, out float jx, out float jy, out float scale);
                 if (obj == null) continue;
                 objNeeded.Add((tx, ty));
                 if (!_objActive.TryGetValue((tx, ty), out var sr)) { sr = AcquireObj(); _objActive[(tx, ty)] = sr; }
                 float wx = (float)(tx + 0.5 - centerTxF) + jx;
                 float wy = (float)-(ty + 0.5 - centerTyF) + jy;
                 sr.transform.localPosition = new Vector3(wx, wy, 0f);
+                sr.transform.localScale = new Vector3(scale, scale, 1f); // (A) 인스턴스 스케일 변형
                 sr.sprite = obj;
                 uint hh = TileHash(tx, ty);
                 sr.flipX = ((hh >> 16) & 1u) == 1u;
@@ -317,14 +324,38 @@ public class TilemapRenderer : MonoBehaviour
         return false;
     }
 
-    // 타일에 놓을 오브젝트 결정(결정론적 hash). forest=나무 밀도 높음, grass=드물게 덤불/그루터기.
-    private Sprite PickObject(long tx, long ty, out float jx, out float jy)
+    // 저주파(coarse 셀) 결정론 노이즈. 4타일 셀 격자에 셀당 난수 → smoothstep 보간 → 0..1.
+    // (B)/(C) deco 밀도·꽃밭 패치를 부드러운 군집/공터로 변조하는 데 사용.
+    private const uint DecoSeed = 0xA53Fu;   // deco 밀도 클러스터
+    private const uint FlowerSeed = 0x1BC7u; // 꽃밭 패치
+
+    private static float CellRand(long cx, long cy, uint seed)
     {
-        jx = 0f; jy = 0f;
+        ulong h = (ulong)(cx * 0x27d4eb2dL) ^ (ulong)(cy * 0x165667b1L) ^ (seed * 0x9e3779b9UL);
+        h ^= h >> 13; h *= 0x5bd1e995UL; h ^= h >> 15;
+        return (uint)h / 4294967295f;
+    }
+
+    private static float ClusterValue(long tx, long ty, uint seed)
+    {
+        long cx = tx >> 2, cy = ty >> 2;                 // 4타일 셀(산술 시프트=floor)
+        float fx = (tx - (cx << 2)) / 4f, fy = (ty - (cy << 2)) / 4f;
+        fx = fx * fx * (3f - 2f * fx); fy = fy * fy * (3f - 2f * fy); // smoothstep
+        float a = Mathf.Lerp(CellRand(cx, cy, seed),     CellRand(cx + 1, cy, seed),     fx);
+        float b = Mathf.Lerp(CellRand(cx, cy + 1, seed), CellRand(cx + 1, cy + 1, seed), fx);
+        return Mathf.Lerp(a, b, fy);
+    }
+
+    // 타일에 놓을 오브젝트 결정(결정론적 hash). scale=인스턴스 스케일 변형(A).
+    // forest=나무 밀도 높음, grass=클러스터 변조된 풀/덤불 + 꽃밭 패치 군락.
+    private Sprite PickObject(long tx, long ty, out float jx, out float jy, out float scale)
+    {
         uint hh = TileHash(tx, ty);
-        jx = (((hh >> 4) & 0xFFu) / 255f - 0.5f) * 0.5f;
-        jy = (((hh >> 12) & 0xFFu) / 255f - 0.5f) * 0.5f;
+        jx = (((hh >> 4) & 0xFFu) / 255f - 0.5f) * 0.8f;   // (D) ±0.4 격자감 제거
+        jy = (((hh >> 12) & 0xFFu) / 255f - 0.5f) * 0.8f;
+        scale = 1f;
         TileType tt = TileTypeAt(tx, ty);
+
         if (tt == TileType.Building)
         {
             // 풋프린트 좌상단 타일에만 집 1채(왼쪽·위가 건물이면 스킵 → 중복 방지)
@@ -333,26 +364,43 @@ public class TilemapRenderer : MonoBehaviour
             if (!leftB && !upB) { jx = 0.5f; jy = 0.3f; return ((hh >> 1) & 1u) == 0u ? _houseA : _houseB; }
             return null; // 나머지 건물 타일은 비움(잔디)
         }
+
+        float treeScale = 0.82f + (((hh >> 20) & 0xFFu) / 255f) * 0.40f; // 0.82~1.22
+        float decoScale = 0.85f + (((hh >> 20) & 0xFFu) / 255f) * 0.30f; // 0.85~1.15
+
         if (tt == TileType.Forest)
         {
             // 거의 모든 forest 타일에 나무 → 빽빽한 숲
-            if ((hh % 100u) < 90u) return ((hh >> 1) & 1u) == 0u ? _treeA : _treeB;
-            return _bush; // 나머지는 덤불로 메움
+            if ((hh % 100u) < 90u) { scale = treeScale; return ((hh >> 1) & 1u) == 0u ? _treeA : _treeB; }
+            scale = decoScale; return _bush; // 나머지는 덤불로 메움
         }
         if (tt == TileType.Grass)
         {
-            uint r = hh % 100u;
             // 숲 가장자리: 숲에 인접한 잔디 → 나무로 자연스러운 군락 falloff(숲이 잔디로 번짐)
-            if (NearType(tx, ty, TileType.Forest, 1) && r < 55u)
-                return ((hh >> 1) & 1u) == 0u ? _treeA : _treeB;
+            if (NearType(tx, ty, TileType.Forest, 1) && (hh % 100u) < 55u)
+            { scale = treeScale; return ((hh >> 1) & 1u) == 0u ? _treeA : _treeB; }
             // 길/도로 옆 가로수 라인(구도 프레이밍)
-            if ((NearType(tx, ty, TileType.Road, 1) || NearType(tx, ty, TileType.Path, 1)) && r < 22u)
-                return ((hh >> 1) & 1u) == 0u ? _treeA : _treeB;
-            // 그 외 빈 잔디: 풀포기/꽃/덤불/그루터기
-            if (r < 40u) { uint t = (hh >> 5) % 3u; return t == 0u ? _tuftA : (t == 1u ? _tuftB : _tuftC); }
-            if (r < 52u) return ((hh >> 6) & 1u) == 0u ? _flowerW : _flowerR;
-            if (r < 54u) return _bush;
-            if (r < 55u) return _stump;
+            if ((NearType(tx, ty, TileType.Road, 1) || NearType(tx, ty, TileType.Path, 1)) && (hh % 100u) < 22u)
+            { scale = treeScale; return ((hh >> 1) & 1u) == 0u ? _treeA : _treeB; }
+
+            // (B) 클러스터 밀도 변조: 공터 ↔ 군집. 평균 밀도는 현행보다 하향.
+            float c = ClusterValue(tx, ty, DecoSeed);          // 0..1 저주파
+            uint r = hh % 1000u;
+            uint tuftCut  = (uint)(c * 430f);                  // 군집에서 최대 ~43%
+            uint bushCut  = tuftCut + (uint)(c * c * 45f);     // 덤불은 빽빽한 군집에만
+            uint stumpCut = bushCut + 6u;                      // 그루터기 드물게 전역
+            if (r < tuftCut)  { scale = decoScale; uint t = (hh >> 5) % 3u; return t == 0u ? _tuftA : (t == 1u ? _tuftB : _tuftC); }
+            if (r < bushCut)  { scale = decoScale; return _bush; }
+            if (r < stumpCut) { scale = decoScale; return _stump; }
+
+            // (C) 꽃 클럼핑: 꽃밭 패치 셀에서만 군락(패치 밖 잔디엔 거의 없음)
+            float fp = ClusterValue(tx, ty, FlowerSeed);
+            if (fp > 0.60f)
+            {
+                float dens = (fp - 0.60f) / 0.40f;             // 패치 내 0..1
+                uint fr = (hh >> 7) % 1000u;
+                if (fr < (uint)(dens * 520f)) { scale = decoScale; return ((hh >> 6) & 1u) == 0u ? _flowerW : _flowerR; }
+            }
             return null;
         }
         return null;
