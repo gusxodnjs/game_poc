@@ -40,6 +40,10 @@ public class PlayerAvatar : MonoBehaviour
     [Tooltip("패닝 시 아바타를 GPS 실제 위치에 고정하기 위한 화면 오프셋 소스")]
     [SerializeField] private TilemapRenderer tilemap;
 
+    [Header("외형 (커스터마이징 seam)")]
+    [Tooltip("아바타 외형 설정. 향후 커스터마이징은 이 데이터만 바꾸면 됨. 현재 기본값 1세트.")]
+    [SerializeField] private AvatarConfig avatar = new AvatarConfig();
+
     private float _startTime;
 
     private void Start()
@@ -88,9 +92,9 @@ public class PlayerAvatar : MonoBehaviour
             var tex = idleFrames[idx];
             if (tex != null)
             {
-                float w = tex.width * characterScale * z;
+                float w = tex.width * characterScale * z;   // 줌 연동
                 float h = tex.height * characterScale * z;
-                GUI.color = Color.white;
+                GUI.color = (avatar != null) ? avatar.tint : Color.white; // 커스터마이징 틴트(기본 흰색=원본)
                 GUI.DrawTexture(new Rect(cx - w * 0.5f, cy - h * 0.5f, w, h), tex, ScaleMode.ScaleToFit);
             }
         }
