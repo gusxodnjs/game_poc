@@ -117,6 +117,7 @@ public class CreatureField : MonoBehaviour
         tilemap.CenterTileFrac(out double cTxF, out double cTyF);
         float dt = Time.deltaTime;
         float t = Time.time;
+        var billboard = Quaternion.Euler(0f, 0f, -tilemap.HeadingDeg); // 맵 회전해도 생물은 수직 유지
 
         for (int i = _creatures.Count - 1; i >= 0; i--)
         {
@@ -130,6 +131,7 @@ public class CreatureField : MonoBehaviour
                 c.sr.transform.localPosition = p;
                 float s = spriteScale * (1f - u) * (1f + u * 0.4f);          // 살짝 커졌다 사라짐
                 c.sr.transform.localScale = new Vector3(s, s, 1f);
+                c.sr.transform.localRotation = billboard;
                 var col = c.sr.color; col.a = 1f - u; c.sr.color = col;
                 if (c.flyT >= 1f)
                 {
@@ -173,6 +175,7 @@ public class CreatureField : MonoBehaviour
             var local = tilemap.LocalForTileFrac(c.gxf, c.gyf);
             c.sr.transform.localPosition = local;
             c.sr.transform.localScale = new Vector3(spriteScale, spriteScale, 1f);
+            c.sr.transform.localRotation = billboard;
             var frames = c.frames;
             if (frames != null && frames.Length > 0)
             {
