@@ -40,6 +40,10 @@ public class PlayerAvatar : MonoBehaviour
     [Tooltip("패닝 시 아바타를 GPS 실제 위치에 고정하기 위한 화면 오프셋 소스")]
     [SerializeField] private TilemapRenderer tilemap;
 
+    [Header("외형 (커스터마이징 seam)")]
+    [Tooltip("아바타 외형 설정. 향후 커스터마이징은 이 데이터만 바꾸면 됨. 현재 기본값 1세트.")]
+    [SerializeField] private AvatarConfig avatar = new AvatarConfig();
+
     private float _startTime;
 
     private void Start()
@@ -55,6 +59,8 @@ public class PlayerAvatar : MonoBehaviour
 
         float cx = Screen.width * 0.5f;
         float cy = Screen.height * 0.5f;
+        // 핀치줌 연동: 맵이 줌인/아웃되면 캐릭터·링·그림자도 함께 크기 변동(월드와 일치).
+        float z = (tilemap != null) ? tilemap.ZoomFactor : 1f;
         if (tilemap != null) { var o = tilemap.PlayerGuiOffset; cx += o.x; cy += o.y; }
 
         // 1) accuracy ring — sin 파형 펄스로 alpha 0.4 ~ 0.8 왕복
@@ -62,8 +68,8 @@ public class PlayerAvatar : MonoBehaviour
         {
             float t = ((Time.time - _startTime) % ringPulsePeriodSec) / ringPulsePeriodSec;
             float pulse = Mathf.Lerp(0.4f, 0.8f, (Mathf.Sin(t * Mathf.PI * 2f) + 1f) * 0.5f);
-            float rw = accuracyRingTex.width * ringScale;
-            float rh = accuracyRingTex.height * ringScale;
+            float rw = accuracyRingTex.width * ringScale * z;
+            float rh = accuracyRingTex.height * ringScale * z;
             GUI.color = new Color(1f, 1f, 1f, pulse);
             GUI.DrawTexture(new Rect(cx - rw * 0.5f, cy - rh * 0.5f, rw, rh), accuracyRingTex, ScaleMode.ScaleToFit);
         }
@@ -72,9 +78,9 @@ public class PlayerAvatar : MonoBehaviour
         //    캐릭터 sprite 64px 의 발이 대략 중심 +35% 아래에 위치.
         if (shadowTex != null)
         {
-            float sw = shadowTex.width * shadowScale;
-            float sh = shadowTex.height * shadowScale;
-            float footY = cy + (64f * characterScale * 0.35f);
+            float sw = shadowTex.width * shadowScale * z;
+            float sh = shadowTex.height * shadowScale * z;
+            float footY = cy + (64f * characterScale * z * 0.35f);
             GUI.color = new Color(1f, 1f, 1f, 0.55f);
             GUI.DrawTexture(new Rect(cx - sw * 0.5f, footY - sh * 0.5f, sw, sh), shadowTex, ScaleMode.ScaleToFit);
         }
@@ -86,9 +92,9 @@ public class PlayerAvatar : MonoBehaviour
             var tex = idleFrames[idx];
             if (tex != null)
             {
-                float w = tex.width * characterScale;
-                float h = tex.height * characterScale;
-                GUI.color = Color.white;
+                float w = tex.width * characterScale * z;   // 줌 연동
+                float h = tex.height * characterScale * z;
+                GUI.color = (avatar != null) ? avatar.tint : Color.white; // 커스터마이징 틴트(기본 흰색=원본)
                 GUI.DrawTexture(new Rect(cx - w * 0.5f, cy - h * 0.5f, w, h), tex, ScaleMode.ScaleToFit);
             }
         }
