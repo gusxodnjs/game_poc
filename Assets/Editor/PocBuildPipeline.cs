@@ -102,6 +102,53 @@ public static class PocBuildPipeline
         }
     }
 
+    // 움직이는 생물(무당벌레/꿀벌) 애니 프레임 — CreatureField 의 슬롯에 주입. 투명·하단앵커.
+    private const string CreatureDir = "Assets/sprites";
+    private static readonly string[] LadybugFramePaths = {
+        CreatureDir + "/ladybug_anim_frame0_64x64.png",
+        CreatureDir + "/ladybug_anim_frame1_64x64.png",
+        CreatureDir + "/ladybug_anim_frame2_64x64.png",
+        CreatureDir + "/ladybug_anim_frame3_64x64.png",
+    };
+    private static readonly string[] HoneybeeFramePaths = {
+        CreatureDir + "/honeybee_anim_frame0_64x64.png",
+        CreatureDir + "/honeybee_anim_frame1_64x64.png",
+        CreatureDir + "/honeybee_anim_frame2_64x64.png",
+        CreatureDir + "/honeybee_anim_frame3_64x64.png",
+    };
+
+    private static void EnsureCreatureTextureSettings()
+    {
+        var all = new List<string>(LadybugFramePaths);
+        all.AddRange(HoneybeeFramePaths);
+        foreach (var path in all)
+        {
+            if (!File.Exists(path)) { Debug.LogWarning("[POC] Creature frame missing: " + path); continue; }
+            var importer = AssetImporter.GetAtPath(path) as TextureImporter;
+            if (importer == null) continue;
+            importer.textureType = TextureImporterType.Sprite;
+            importer.spriteImportMode = SpriteImportMode.Single;
+            importer.filterMode = FilterMode.Point;
+            importer.mipmapEnabled = false;
+            importer.alphaIsTransparency = true;
+            importer.spritePixelsPerUnit = 64;
+            importer.SaveAndReimport();
+        }
+    }
+
+    private static Texture2D[] LoadFrames(string[] paths, out int loaded)
+    {
+        var arr = new Texture2D[paths.Length];
+        loaded = 0;
+        for (int i = 0; i < paths.Length; i++)
+        {
+            arr[i] = AssetDatabase.LoadAssetAtPath<Texture2D>(paths[i]);
+            if (arr[i] != null) loaded++;
+            else Debug.LogWarning("[POC] Creature frame not loaded: " + paths[i]);
+        }
+        return arr;
+    }
+
     private const string BundleId = "com.gusxodnjs.terrapoc";
     private const string BuildOutput = "build/ios";
 
@@ -210,6 +257,24 @@ public static class PocBuildPipeline
         var avSo = new SerializedObject(avatar);
         var avTmProp = avSo.FindProperty("tilemap");
         if (avTmProp != null) { avTmProp.objectReferenceValue = tilemap; avSo.ApplyModifiedPropertiesWithoutUndo(); }
+
+        // CreatureField — 맵 위를 배회하는 샘플 생물(무당벌레/꿀벌). 탭 잡기 → 행성 전송.
+        EnsureCreatureTextureSettings();
+        var creatureRoot = new GameObject("CreatureRoot");
+        var creatures = creatureRoot.AddComponent<CreatureField>();
+        var ladybug = LoadFrames(LadybugFramePaths, out int ladybugLoaded);
+        var honeybee = LoadFrames(HoneybeeFramePaths, out int honeybeeLoaded);
+        var crSo = new SerializedObject(creatures);
+        crSo.FindProperty("tilemap").objectReferenceValue = tilemap;
+        crSo.FindProperty("mapCamera").objectReferenceValue = cam;
+        var lbProp = crSo.FindProperty("ladybugFrames");
+        lbProp.arraySize = ladybug.Length;
+        for (int i = 0; i < ladybug.Length; i++) lbProp.GetArrayElementAtIndex(i).objectReferenceValue = ladybug[i];
+        var hbProp = crSo.FindProperty("honeybeeFrames");
+        hbProp.arraySize = honeybee.Length;
+        for (int i = 0; i < honeybee.Length; i++) hbProp.GetArrayElementAtIndex(i).objectReferenceValue = honeybee[i];
+        crSo.ApplyModifiedPropertiesWithoutUndo();
+        Debug.Log("[POC] CreatureField wired: ladybug=" + ladybugLoaded + "/4, honeybee=" + honeybeeLoaded + "/4");
 
         EditorSceneManager.SaveScene(scene, ScenePath);
 
