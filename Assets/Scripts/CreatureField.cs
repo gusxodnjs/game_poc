@@ -97,6 +97,17 @@ public class CreatureField : MonoBehaviour
 
     private void Update()
     {
+        if (tilemap == null) return;
+        if (mapCamera == null) mapCamera = Camera.main;
+        // 도메인 리로드(Play 중 재컴파일) 자가복구: 비직렬화 상태 유실 감지 → 재초기화.
+        // 옛 생물 SpriteRenderer 는 TilemapRenderer 의 옛 _root 와 함께 파괴되므로 리스트도 비운다.
+        if (_root == null || (_ladybugSprites == null && _honeybeeSprites == null))
+        {
+            _root = tilemap.MapRoot;
+            _ladybugSprites = BuildSprites(ladybugFrames);
+            _honeybeeSprites = BuildSprites(honeybeeFrames);
+            _creatures.Clear();
+        }
         if (_root == null || mapCamera == null || !HasAnySprites) return;
 
         // 목표 마릿수 유지(프레임당 최대 2마리 스폰 — 스폰 실패 시 무한루프 방지)
