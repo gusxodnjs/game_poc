@@ -3,7 +3,7 @@ using UnityEngine;
 
 /// <summary>
 /// 지구 산책 레이어의 "움직이는 샘플 생물" — 화면 안 잔디 위를 배회하는 무당벌레/꿀벌.
-/// 탭하면 잡아서 "내 행성으로" 날아가는 연출 + GameSession 컬렉션에 기록(카운터).
+/// 내 위치가 생물에 근접하면(포켓몬고식) 하이라이트 + "잡기" 버튼 → "내 행성으로" 연출 + GameSession 기록(카운터).
 ///
 /// 좌표계: 생물 SpriteRenderer 를 TilemapRenderer.MapRoot 하위에 두고 LocalForTileFrac 로 배치 →
 ///         타일과 동일 변환이라 팬/줌/GPS 추적에 맵과 함께 움직인다(오쏘 카메라가 줌 자동 처리).
@@ -24,7 +24,7 @@ public class CreatureField : MonoBehaviour
     [SerializeField] private int maxCreatures = 5;
     [SerializeField] private float animFps = 8f;
     [SerializeField] private float spriteScale = 0.55f;   // 월드 유닛(타일) 기준 크기
-    [SerializeField] private float catchRadiusWorld = 0.7f;
+    [SerializeField] private float catchRangeTiles = 1.2f; // 내 위치 반경(타일) 안이면 잡기 가능(≈4m)
     [SerializeField] private float flyDuration = 0.55f;
 
     private enum Kind { Ladybug, Honeybee }
@@ -50,13 +50,11 @@ public class CreatureField : MonoBehaviour
     private Transform _root;
     private System.Random _rng = new System.Random();
 
-    // 입력(탭 판정)
-    private bool _pointerDown;
-    private Vector2 _downPos;
-    private float _downTime;
+    // 근접 잡기 대상(내 위치 반경 안 가장 가까운 생물). 없으면 null → "잡기" 버튼 숨김.
+    private Creature _catchTarget;
 
     // UI
-    private GUIStyle _counterStyle, _toastStyle, _toastShadow;
+    private GUIStyle _counterStyle, _toastStyle, _toastShadow, _catchBtnStyle;
     private string _toastMsg = "";
     private float _toastTime = -10f;
     private int _caughtTotal;
@@ -117,6 +115,8 @@ public class CreatureField : MonoBehaviour
         tilemap.CenterTileFrac(out double cTxF, out double cTyF);
         float dt = Time.deltaTime;
         float t = Time.time;
+        tilemap.GpsTileFrac(out double pgx, out double pgy);          // 내 위치(근접 잡기 판정)
+        Creature nearest = null; double nearestD = (double)catchRangeTiles * catchRangeTiles;
 
         for (int i = _creatures.Count - 1; i >= 0; i--)
         {
@@ -169,10 +169,18 @@ public class CreatureField : MonoBehaviour
                 continue;
             }
 
-            // 렌더
+            // 근접: 내 위치 반경 안 가장 가까운 생물을 잡기 대상으로 추적
+            double pdx = c.gxf - pgx, pdy = c.gyf - pgy;
+            double pd2 = pdx * pdx + pdy * pdy;
+            if (pd2 < nearestD) { nearestD = pd2; nearest = c; }
+            bool isTarget = (c == _catchTarget);
+
+            // 렌더 (대상은 펄스+밝기 하이라이트)
+            float hs = spriteScale * (isTarget ? 1f + 0.14f * Mathf.Sin(t * 7f) : 1f);
             var local = tilemap.LocalForTileFrac(c.gxf, c.gyf);
             c.sr.transform.localPosition = local;
-            c.sr.transform.localScale = new Vector3(spriteScale, spriteScale, 1f);
+            c.sr.transform.localScale = new Vector3(hs, hs, 1f);
+            c.sr.color = isTarget ? new Color(1f, 1f, 0.6f, 1f) : Color.white;
             var frames = c.frames;
             if (frames != null && frames.Length > 0)
             {
@@ -182,7 +190,7 @@ public class CreatureField : MonoBehaviour
             c.sr.flipX = Mathf.Cos(c.heading) < 0f;                          // 왼쪽 이동 시 뒤집기
         }
 
-        HandleTap();
+        _catchTarget = nearest; // 다음 프레임 하이라이트 + "잡기" 버튼 표시 대상
     }
 
     private float ViewRadiusTiles()
@@ -232,50 +240,18 @@ public class CreatureField : MonoBehaviour
         _creatures.Add(c);
     }
 
-    // ---- 탭 잡기 (맵 드래그/핀치와 충돌 회피: 짧고 안 움직인 단일 터치만) ----
-    private void HandleTap()
+    // 근접 잡기: "잡기" 버튼이 호출. 대상을 "내 행성으로" 날아가는 연출로 전환.
+    private void StartCatch(Creature c)
     {
-#if UNITY_EDITOR
-        if (Input.GetMouseButtonDown(0)) { _pointerDown = true; _downPos = Input.mousePosition; _downTime = Time.time; }
-        else if (Input.GetMouseButtonUp(0) && _pointerDown)
-        {
-            _pointerDown = false;
-            TryCatchAt(Input.mousePosition, Time.time - _downTime, ((Vector2)Input.mousePosition - _downPos).magnitude);
-        }
-#else
-        if (Input.touchCount == 1)
-        {
-            var tch = Input.GetTouch(0);
-            if (tch.phase == TouchPhase.Began) { _pointerDown = true; _downPos = tch.position; _downTime = Time.time; }
-            else if (tch.phase == TouchPhase.Ended && _pointerDown)
-            {
-                _pointerDown = false;
-                TryCatchAt(tch.position, Time.time - _downTime, (tch.position - _downPos).magnitude);
-            }
-        }
-        else if (Input.touchCount >= 2) { _pointerDown = false; } // 핀치 중엔 잡기 취소
-#endif
-    }
-
-    private void TryCatchAt(Vector2 screenPos, float duration, float moved)
-    {
-        if (duration > 0.35f || moved > 16f) return; // 드래그/롱프레스는 잡기 아님
-        Vector3 world = mapCamera.ScreenToWorldPoint(new Vector3(screenPos.x, screenPos.y, -mapCamera.transform.position.z));
-        Creature best = null; float bestD = catchRadiusWorld * catchRadiusWorld;
-        foreach (var c in _creatures)
-        {
-            if (c.flying) continue;
-            Vector3 wp = _root.TransformPoint(c.sr.transform.localPosition);
-            float d = (wp.x - world.x) * (wp.x - world.x) + (wp.y - world.y) * (wp.y - world.y);
-            if (d < bestD) { bestD = d; best = c; }
-        }
-        if (best == null) return;
-        best.flying = true;
-        best.flyT = 0f;
-        best.flyStartLocal = best.sr.transform.localPosition;
-        DisplayName.TryGetValue(best.speciesId, out string nm);
-        _toastMsg = (nm ?? best.speciesId) + " → 내 행성으로!";
+        if (c == null || c.flying) return;
+        c.flying = true;
+        c.flyT = 0f;
+        c.flyStartLocal = c.sr.transform.localPosition;
+        c.sr.color = Color.white;
+        DisplayName.TryGetValue(c.speciesId, out string nm);
+        _toastMsg = (nm ?? c.speciesId) + " → 내 행성으로!";
         _toastTime = Time.time;
+        _catchTarget = null;
     }
 
     private void OnGUI()
@@ -304,6 +280,15 @@ public class CreatureField : MonoBehaviour
             GUI.Label(r, _toastMsg, _toastStyle);
             GUI.color = prev;
         }
+
+        // 근접 시 "잡기" 버튼(하단 중앙, 엄지 도달). 대상 없으면 숨김.
+        if (_catchTarget != null && !_catchTarget.flying)
+        {
+            float bw = Screen.width * 0.4f, bh = Screen.height * 0.08f;
+            float bx = (Screen.width - bw) * 0.5f;
+            float by = Screen.height - safe.y - bh - Screen.height * 0.04f;
+            if (GUI.Button(new Rect(bx, by, bw, bh), "잡기", _catchBtnStyle)) StartCatch(_catchTarget);
+        }
     }
 
     private void EnsureStyles()
@@ -318,5 +303,7 @@ public class CreatureField : MonoBehaviour
         _toastStyle.normal.textColor = new Color(1f, 0.95f, 0.6f, 1f);
         _toastShadow = new GUIStyle(_toastStyle) { alignment = TextAnchor.MiddleCenter };
         _toastShadow.normal.textColor = new Color(0f, 0f, 0f, 0.7f);
+        _catchBtnStyle = new GUIStyle(GUI.skin.button)
+        { fontSize = Mathf.Max(22, Screen.height / 20), fontStyle = FontStyle.Bold };
     }
 }
