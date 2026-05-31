@@ -356,6 +356,13 @@ public class TilemapRenderer : MonoBehaviour
         var sr = go.AddComponent<SpriteRenderer>(); sr.sortingOrder = 1; return sr;
     }
 
+    // (tx,ty) 바로 북쪽(ty-1, 화면 위)이 도로/길인가 — 캐노피가 위로 뻗어 도로를 덮는지 판정.
+    private bool RoadOrPathNorth(long tx, long ty)
+    {
+        var n = TileTypeAt(tx, ty - 1);
+        return n == TileType.Road || n == TileType.Path;
+    }
+
     // (tx,ty) 주변 반경 r 안에 타입 t 가 하나라도 있나.
     private bool NearType(long tx, long ty, TileType t, int r)
     {
@@ -414,18 +421,30 @@ public class TilemapRenderer : MonoBehaviour
 
         if (tt == TileType.Forest)
         {
-            // 거의 모든 forest 타일에 나무 → 빽빽한 숲
+            // 도로가 바로 북쪽 → 캐노피가 도로 침범 → 나무 금지(덤불 완충)
+            if (RoadOrPathNorth(tx, ty)) { scale = decoScale; return _bush; }
+            // 도로/길 인접 숲 가장자리 페더링: 나무 밀도↓(90→45%) + 작은 나무/덤불 → 벽 끊김 완화
+            if (NearType(tx, ty, TileType.Road, 1) || NearType(tx, ty, TileType.Path, 1))
+            {
+                if ((hh % 100u) < 45u) { scale = treeScale * 0.85f; return ((hh >> 1) & 1u) == 0u ? _treeA : _treeB; }
+                scale = decoScale; return _bush;
+            }
+            // 그 외: 거의 모든 forest 타일에 나무 → 빽빽한 숲
             if ((hh % 100u) < 90u) { scale = treeScale; return ((hh >> 1) & 1u) == 0u ? _treeA : _treeB; }
             scale = decoScale; return _bush; // 나머지는 덤불로 메움
         }
         if (tt == TileType.Grass)
         {
-            // 숲 가장자리: 숲에 인접한 잔디 → 나무로 자연스러운 군락 falloff(숲이 잔디로 번짐)
-            if (NearType(tx, ty, TileType.Forest, 1) && (hh % 100u) < 55u)
+            // 숲 가장자리: 숲에 인접한 잔디 → 나무 falloff. 단 도로가 바로 북쪽이면 캐노피 침범 → 제외.
+            if (NearType(tx, ty, TileType.Forest, 1) && (hh % 100u) < 55u && !RoadOrPathNorth(tx, ty))
             { scale = treeScale; return ((hh >> 1) & 1u) == 0u ? _treeA : _treeB; }
             // 길/도로 옆 가로수 라인(구도 프레이밍)
             if ((NearType(tx, ty, TileType.Road, 1) || NearType(tx, ty, TileType.Path, 1)) && (hh % 100u) < 22u)
-            { scale = treeScale; return ((hh >> 1) & 1u) == 0u ? _treeA : _treeB; }
+            {
+                // 도로가 바로 북쪽이면 캐노피가 도로를 덮음 → 나무 대신 덤불/풀 완충
+                if (RoadOrPathNorth(tx, ty)) { scale = decoScale; return ((hh >> 5) & 1u) == 0u ? _bush : _tuftA; }
+                scale = treeScale; return ((hh >> 1) & 1u) == 0u ? _treeA : _treeB;
+            }
 
             // (B) 클러스터 밀도 변조: 공터 ↔ 군집. 평균 밀도는 현행보다 하향.
             float c = ClusterValue(tx, ty, DecoSeed);          // 0..1 저주파
