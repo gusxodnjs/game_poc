@@ -97,6 +97,13 @@ public class TilemapRenderer : MonoBehaviour
         txf = a; tyf = b;
     }
 
+    /// <summary>내 GPS 위치의 전역 타일-분수좌표(근접 잡기 판정용).</summary>
+    public void GpsTileFrac(out double txf, out double tyf)
+    {
+        var (a, b) = GeoTileGrid.LatLonToTileFractional(_gpsLat, _gpsLon);
+        txf = a; tyf = b;
+    }
+
     /// <summary>생물이 지나갈 수 있는 타일인가(물/건물은 회피).</summary>
     public bool IsWalkable(long tx, long ty)
     {
